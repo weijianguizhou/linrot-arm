@@ -1,0 +1,65 @@
+[
+ {
+  "joint": "R5",
+  "parent": "B2",
+  "child": "B5",
+  "type": "revolute",
+  "origin_mm": [
+   0,
+   56,
+   -419
+  ],
+  "origin_parent_mm": [
+   0.0,
+   56.0,
+   -224.40418785926033
+  ],
+  "axis": [
+   0,
+   1,
+   0
+  ]
+ },
+ {
+  "joint": "R9",
+  "parent": "B6",
+  "child": "B11",
+  "type": "revolute",
+  "origin_mm": [
+   0,
+   56,
+   -700
+  ],
+  "origin_parent_mm": [
+   -14.560865124373152,
+   56.0,
+   -8.011309834070289
+  ],
+  "axis": [
+   0,
+   1,
+   0
+  ]
+ },
+ {
+  "joint": "R11",
+  "parent": "B10",
+  "child": "B11",
+  "type": "revolute",
+  "origin_mm": [
+   56,
+   94,
+   -742
+  ],
+  "origin_parent_mm": [
+   56.0,
+   68.77807806593016,
+   -41.7613476532174
+  ],
+  "axis": [
+   0,
+   1,
+   0
+  ]
+ }
+]

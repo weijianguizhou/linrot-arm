@@ -1,0 +1,83 @@
+[
+ {
+  "joint": "R5",
+  "parent": "B2",
+  "child": "B5",
+  "type": "revolute",
+  "origin_mm": [
+   -75.898,
+   137.015,
+   -381.388
+  ],
+  "origin_parent_mm": [
+   13.0,
+   0.0,
+   -309.888
+  ],
+  "origin_child_mm": [
+   20.5,
+   0.0,
+   24.57
+  ],
+  "axis": [
+   0.0,
+   -1.0,
+   0.0
+  ],
+  "note": "闭环约束关节：URDF 树里没有，需在 MuJoCo/SDF 用 equality/joint 补"
+ },
+ {
+  "joint": "R9",
+  "parent": "B6",
+  "child": "B11",
+  "type": "revolute",
+  "origin_mm": [
+   -49.116,
+   137.015,
+   -653.388
+  ],
+  "origin_parent_mm": [
+   -10.0,
+   0.0,
+   0.0
+  ],
+  "origin_child_mm": [
+   40.0,
+   -36.0,
+   0.0
+  ],
+  "axis": [
+   0.0,
+   -1.0,
+   0.0
+  ],
+  "note": "闭环约束关节：URDF 树里没有，需在 MuJoCo/SDF 用 equality/joint 补"
+ },
+ {
+  "joint": "R11",
+  "parent": "B10",
+  "child": "B11",
+  "type": "revolute",
+  "origin_mm": [
+   -89.116,
+   101.015,
+   -653.388
+  ],
+  "origin_parent_mm": [
+   -3.636,
+   0.0,
+   -45.383
+  ],
+  "origin_child_mm": [
+   0.0,
+   -72.0,
+   0.0
+  ],
+  "axis": [
+   0.0,
+   -1.0,
+   0.0
+  ],
+  "note": "闭环约束关节：URDF 树里没有，需在 MuJoCo/SDF 用 equality/joint 补"
+ }
+]

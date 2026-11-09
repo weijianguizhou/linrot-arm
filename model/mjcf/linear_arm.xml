@@ -1,0 +1,98 @@
+<mujoco model="linear_arm">
+  <compiler angle="radian" meshdir="../meshes" autolimits="true"/>
+  <option gravity="0 0 -9.81"/>
+  <visual>
+    <global offwidth="1400" offheight="1400"/>
+    <headlight ambient="0.35 0.35 0.35" diffuse="0.6 0.6 0.6" specular="0.1 0.1 0.1"/>
+    <map znear="0.01" zfar="20"/>
+  </visual>
+  <default>
+    <joint damping="0.05" armature="0.0"/>
+    <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="0.72 0.74 0.77 1"/>
+  </default>
+  <asset>
+    <mesh name="B0_mesh" file="B0.stl" scale="1 1 1"/>
+    <mesh name="B1_mesh" file="B1.stl" scale="1 1 1"/>
+    <mesh name="B2_mesh" file="B2.stl" scale="1 1 1"/>
+    <mesh name="B3_mesh" file="B3.stl" scale="1 1 1"/>
+    <mesh name="B4_mesh" file="B4.stl" scale="1 1 1"/>
+    <mesh name="B5_mesh" file="B5.stl" scale="1 1 1"/>
+    <mesh name="B6_mesh" file="B6.stl" scale="1 1 1"/>
+    <mesh name="B7_mesh" file="B7.stl" scale="1 1 1"/>
+    <mesh name="B8_mesh" file="B8.stl" scale="1 1 1"/>
+    <mesh name="B9_mesh" file="B9.stl" scale="1 1 1"/>
+    <mesh name="B10_mesh" file="B10.stl" scale="1 1 1"/>
+    <mesh name="B11_mesh" file="B11.stl" scale="1 1 1"/>
+  </asset>
+  <worldbody>
+    <body name="B0" pos="0 0 0">
+      <inertial pos="-0.0052741 -0.0236946 -9.25586e-05" mass="0.640000" fullinertia="0.000505456 0.000461882 0.00050765 -6.80573e-06 8.31944e-07 3.10686e-06"/>
+      <geom name="B0_geom" mesh="B0_mesh"/>
+      <body name="B1" pos="0 0 0">
+        <joint name="R1" type="hinge" pos="0 0 0" axis="0 1 0" range="-2.9 2.9"/>
+        <inertial pos="0.00866034 0.0565644 -0.0429231" mass="1.402918" fullinertia="0.00389724 0.00398596 0.00110351 4.2872e-05 4.31108e-05 7.10226e-05"/>
+        <geom name="B1_geom" mesh="B1_mesh"/>
+        <body name="B2" pos="0 0.05875 -0.104612">
+          <joint name="R2" type="hinge" pos="0 0 0" axis="0 0 1" range="-2.9 2.9"/>
+          <inertial pos="0.0371945 -5.74036e-08 -0.145956" mass="0.765933" fullinertia="0.00836353 0.00869198 0.000580861 -1.20579e-10 0.000207322 -3.21183e-09"/>
+          <geom name="B2_geom" mesh="B2_mesh"/>
+          <body name="B3" pos="0 0 -0.0623883">
+            <joint name="R3" type="hinge" pos="0 0 0" axis="0 1 0" range="-2.9 2.9"/>
+            <inertial pos="-0.00339789 5.18373e-06 -0.124467" mass="1.655451" fullinertia="0.00461991 0.00462326 0.000525385 -4.46717e-08 -0.000110792 6.39415e-07"/>
+            <geom name="B3_geom" mesh="B3_mesh"/>
+            <body name="B4" pos="-0.00617502 -6.68732e-10 -0.224006">
+              <joint name="L1" type="slide" pos="0 0 0" axis="-0.0275558 -2.98419e-09 -0.99962" range="-0.1 0.1"/>
+              <inertial pos="-0.0010802 1.14609e-08 -0.0369863" mass="0.024928" fullinertia="9.61833e-06 8.55063e-06 2.40069e-06 -8.72891e-09 -1.94803e-07 -2.03343e-09"/>
+              <geom name="B4_geom" mesh="B4_mesh"/>
+              <body name="B5" pos="-0.00132494 -1.43486e-10 -0.0480638">
+                <joint name="R4" type="hinge" pos="0 0 0" axis="0 1 0" range="-2.9 2.9"/>
+                <inertial pos="0.0477517 -3.52953e-08 -0.0945253" mass="0.660446" fullinertia="0.00406898 0.00427669 0.000405585 -1.05834e-10 -3.34209e-05 -3.42228e-09"/>
+                <geom name="B5_geom" mesh="B5_mesh"/>
+                <body name="B6" pos="0.057282 0 -0.24743">
+                  <joint name="R6" type="hinge" pos="0 0 0" axis="-1 0 0" range="-2.9 2.9"/>
+                  <inertial pos="0.00143629 2.84217e-17 3.027e-11" mass="0.013479" fullinertia="6.21331e-07 2.3479e-06 2.79753e-06 -1.95019e-22 -4.42211e-14 -3.49303e-13"/>
+                  <geom name="B6_geom" mesh="B6_mesh"/>
+                </body>
+                <body name="B7" pos="0.0205 0.036 -0.08243">
+                  <joint name="R7" type="hinge" pos="0 0 0" axis="0 1 0" range="-2.9 2.9"/>
+                  <inertial pos="-0.00570782 1.7684e-05 -0.0706078" mass="0.540000" fullinertia="7.21105e-05 7.25667e-05 1.07968e-05 1.06234e-08 -5.02354e-06 2.32998e-08"/>
+                  <geom name="B7_geom" mesh="B7_mesh"/>
+                  <body name="B9" pos="-0.00958239 0 -0.119617">
+                    <joint name="L2" type="slide" pos="0 0 0" axis="-0.0798533 0 -0.996807" range="-0.1 0.1"/>
+                    <inertial pos="-0.000373276 8.22244e-09 -0.00449624" mass="0.009826" fullinertia="1.04347e-05 1.05654e-05 3.2784e-07 -3.40017e-13 -8.095e-07 -2.00716e-12"/>
+                    <geom name="B9_geom" mesh="B9_mesh"/>
+                    <body name="B11" pos="-0.00363561 0 -0.0453832">
+                      <joint name="R10" type="hinge" pos="0 0 0" axis="0 1 0" range="-2.9 2.9"/>
+                      <inertial pos="0.0267515 -0.0359999 -0.0129595" mass="0.099639" fullinertia="4.14455e-05 5.29108e-05 5.46024e-05 2.06083e-10 -1.71346e-05 -1.62005e-10"/>
+                      <geom name="B11_geom" mesh="B11_mesh"/>
+                    </body>
+                  </body>
+                </body>
+                <body name="B8" pos="0.0205 -0.036 -0.08243">
+                  <joint name="R8" type="hinge" pos="0 0 0" axis="0 1 0" range="-2.9 2.9"/>
+                  <inertial pos="-0.00560549 -1.7684e-05 -0.070616" mass="0.540000" fullinertia="7.21357e-05 7.25667e-05 1.07716e-05 6.77869e-09 -4.86754e-06 -2.46939e-08"/>
+                  <geom name="B8_geom" mesh="B8_mesh"/>
+                  <body name="B10" pos="-0.00958239 0 -0.119617">
+                    <joint name="L3" type="slide" pos="0 0 0" axis="-0.0798533 0 -0.996807" range="-0.1 0.1"/>
+                    <inertial pos="-0.000373276 8.22244e-09 -0.00449624" mass="0.009826" fullinertia="1.04347e-05 1.05654e-05 3.2784e-07 -3.40017e-13 -8.095e-07 -2.00716e-12"/>
+                    <geom name="B10_geom" mesh="B10_mesh"/>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <!-- 闭环：URDF 树中切断的 R5 / R9 / R11，anchor 为 body1 局部坐标 (m) -->
+  <equality>
+    <!-- R5: B2 -> B5 (revolute, axis=[0.0, -1.0, 0.0]) -->
+    <connect name="loop_R5" body1="B2" body2="B5" anchor="0.013 0 -0.309888"/>
+    <!-- R9: B6 -> B11 (revolute, axis=[0.0, -1.0, 0.0]) -->
+    <connect name="loop_R9" body1="B6" body2="B11" anchor="-0.01 0 0"/>
+    <!-- R11: B10 -> B11 (revolute, axis=[0.0, -1.0, 0.0]) -->
+    <connect name="loop_R11" body1="B10" body2="B11" anchor="-0.003636 0 -0.045383"/>
+  </equality>
+</mujoco>

@@ -1,0 +1,287 @@
+<?xml version="1.0"?>
+<!-- 直线模组手臂 v2：拓扑按用户新给的 B0..B11 图（12 刚体 / 14 关节）
+     R = 转动副，L = 棱柱副；几何/质量/惯量来自 手臂改10.10.SLDASM
+     链路坐标系与世界系平行，关节 origin 只有平移
+     URDF 只能是树：闭环断点 = R5, R9, R11（见 loops.yaml） -->
+<robot name="linear_arm">
+  <link name="B0">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B0.stl"/></geometry>
+      <material name="grey"><color rgba="0.7 0.7 0.72 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B0.stl"/></geometry>
+    </collision>
+    <inertial>
+      <origin xyz="-0.0101717 -0.0389553 0.0459422" rpy="0 0 0"/>
+      <mass value="0.704916"/>
+      <inertia ixx="6.320577e-04" ixy="-1.894839e-05" ixz="-7.915573e-06" iyy="5.432507e-04" iyz="2.620513e-05" izz="6.708173e-04"/>
+    </inertial>
+  </link>
+  <link name="B1">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B1.stl"/></geometry>
+      <material name="grey"><color rgba="0.7 0.7 0.72 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B1.stl"/></geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0.0101717 0.0389553 -0.0459422" rpy="0 0 0"/>
+      <mass value="0.698002"/>
+      <inertia ixx="6.138515e-04" ixy="1.175156e-05" ixz="5.493151e-06" iyy="7.947422e-04" iyz="6.622953e-06" izz="5.408966e-04"/>
+    </inertial>
+  </link>
+  <link name="B2">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B2.stl"/></geometry>
+      <material name="grey"><color rgba="0.7 0.7 0.72 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B2.stl"/></geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0.0372673 1.49421e-05 -0.0842957" rpy="0 0 0"/>
+      <mass value="0.740329"/>
+      <inertia ixx="8.059326e-03" ixy="3.895680e-10" ixz="4.231730e-04" iyy="8.422602e-03" iyz="-3.351580e-10" izz="6.017183e-04"/>
+    </inertial>
+  </link>
+  <link name="B3">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B3.stl"/></geometry>
+      <material name="grey"><color rgba="0.7 0.7 0.72 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B3.stl"/></geometry>
+    </collision>
+    <inertial>
+      <origin xyz="-0.0128177 0.0306362 -0.222395" rpy="0 0 0"/>
+      <mass value="1.650000"/>
+      <inertia ixx="4.530249e-03" ixy="2.171416e-07" ixz="-1.804243e-04" iyy="4.537714e-03" iyz="2.058012e-06" izz="5.300990e-04"/>
+    </inertial>
+  </link>
+  <link name="B4">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B4.stl"/></geometry>
+      <material name="grey"><color rgba="0.7 0.7 0.72 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B4.stl"/></geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0.000967208 0.0334256 0.0707856" rpy="0 0 0"/>
+      <mass value="0.011114"/>
+      <inertia ixx="4.035428e-06" ixy="1.625966e-07" ixz="1.302561e-10" iyy="6.532902e-07" iyz="-2.696084e-09" izz="3.665082e-06"/>
+    </inertial>
+  </link>
+  <link name="B5">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B5.stl"/></geometry>
+      <material name="grey"><color rgba="0.7 0.7 0.72 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B5.stl"/></geometry>
+    </collision>
+    <inertial>
+      <origin xyz="-0.00779692 -0.00980265 -0.0694521" rpy="0 0 0"/>
+      <mass value="0.637441"/>
+      <inertia ixx="3.492894e-03" ixy="-1.031836e-05" ixz="6.005917e-06" iyy="3.545509e-03" iyz="7.460201e-04" izz="5.935767e-04"/>
+    </inertial>
+  </link>
+  <link name="B6">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B6.stl"/></geometry>
+      <material name="grey"><color rgba="0.7 0.7 0.72 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B6.stl"/></geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0.00755587 -0.0228655 0.00376316" rpy="0 0 0"/>
+      <mass value="0.013479"/>
+      <inertia ixx="2.797525e-06" ixy="-4.058115e-14" ixz="-3.497443e-13" iyy="7.200400e-07" iyz="4.008541e-07" izz="2.249190e-06"/>
+    </inertial>
+  </link>
+  <link name="B7">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B7.stl"/></geometry>
+      <material name="grey"><color rgba="0.7 0.7 0.72 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B7.stl"/></geometry>
+    </collision>
+    <inertial>
+      <origin xyz="-0.00166898 0.000380043 -0.106872" rpy="0 0 0"/>
+      <mass value="0.540000"/>
+      <inertia ixx="1.038832e-05" ixy="-6.933927e-08" ixz="1.481160e-07" iyy="7.252745e-05" iyz="2.005081e-08" izz="7.255824e-05"/>
+    </inertial>
+  </link>
+  <link name="B8">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B8.stl"/></geometry>
+      <material name="grey"><color rgba="0.7 0.7 0.72 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B8.stl"/></geometry>
+    </collision>
+    <inertial>
+      <origin xyz="-0.106837 0.00325344 -0.106044" rpy="0 0 0"/>
+      <mass value="0.540000"/>
+      <inertia ixx="1.038800e-05" ixy="7.407184e-08" ixz="3.653512e-08" iyy="7.252330e-05" iyz="-1.584829e-08" izz="7.256271e-05"/>
+    </inertial>
+  </link>
+  <link name="B9">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B9.stl"/></geometry>
+      <material name="grey"><color rgba="0.7 0.7 0.72 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B9.stl"/></geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0.00847329 1.20141e-05 -0.0398775" rpy="0 0 0"/>
+      <mass value="0.009826"/>
+      <inertia ixx="2.634171e-07" ixy="5.106266e-09" ixz="-1.458564e-09" iyy="1.050409e-05" iyz="1.748587e-08" izz="1.056041e-05"/>
+    </inertial>
+  </link>
+  <link name="B10">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B10.stl"/></geometry>
+      <material name="grey"><color rgba="0.7 0.7 0.72 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B10.stl"/></geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0.0155223 -1.16332e-05 -0.0406752" rpy="0 0 0"/>
+      <mass value="0.009826"/>
+      <inertia ixx="2.634171e-07" ixy="5.240246e-09" ixz="-8.609197e-10" iyy="1.050084e-05" iyz="1.058083e-08" izz="1.056366e-05"/>
+    </inertial>
+  </link>
+  <link name="B11">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B11.stl"/></geometry>
+      <material name="grey"><color rgba="0.7 0.7 0.72 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="../meshes/B11.stl"/></geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0.0583956 -0.0202037 0.00736071" rpy="0 0 0"/>
+      <mass value="0.099639"/>
+      <inertia ixx="4.144548e-05" ixy="8.058399e-06" ixz="1.512138e-05" iyy="5.328505e-05" iyz="7.021602e-07" izz="5.422810e-05"/>
+    </inertial>
+  </link>
+  <!-- R1: 两刚体质心中点（置信度 中） -->
+  <joint name="R1" type="revolute">
+    <parent link="B0"/>
+    <child link="B1"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-2.9" upper="2.9" effort="60" velocity="3.0"/>
+  </joint>
+  <!-- R2: SolidWorks 配合轴线（置信度 高） -->
+  <joint name="R2" type="revolute">
+    <parent link="B1"/>
+    <child link="B2"/>
+    <origin xyz="-0.00506636 0.040197 -0.111131" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-2.9" upper="2.9" effort="60" velocity="3.0"/>
+  </joint>
+  <!-- R3: CAD linear_4000_up_trans（置信度 高） -->
+  <joint name="R3" type="revolute">
+    <parent link="B2"/>
+    <child link="B3"/>
+    <origin xyz="1.90424e-06 1.49692e-05 -0.00748833" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-2.9" upper="2.9" effort="60" velocity="3.0"/>
+  </joint>
+  <!-- L1: CAD linear_3000_down_trans（置信度 高） -->
+  <joint name="L1" type="prismatic">
+    <parent link="B3"/>
+    <child link="B4"/>
+    <origin xyz="-0.0129785 -2.84217e-17 -0.289664" rpy="0 0 0"/>
+    <axis xyz="-0.0447603 -9.80212e-17 -0.998998"/>
+    <limit lower="-0.1" upper="0.1" effort="200" velocity="0.5"/>
+  </joint>
+  <!-- R4: 两刚体质心中点（置信度 中） -->
+  <joint name="R4" type="revolute">
+    <parent link="B4"/>
+    <child link="B5"/>
+    <origin xyz="-0.00682971 0.023623 0.00133344" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-2.9" upper="2.9" effort="60" velocity="3.0"/>
+  </joint>
+  <!-- R6: SolidWorks 配合轴线（置信度 高） -->
+  <joint name="R6" type="revolute">
+    <parent link="B5"/>
+    <child link="B6"/>
+    <origin xyz="0.0202063 -0.0236379 -0.236181" rpy="0 0 0"/>
+    <axis xyz="-0.970995 0 0.239099"/>
+    <limit lower="-2.9" upper="2.9" effort="60" velocity="3.0"/>
+  </joint>
+  <!-- R7: SolidWorks 配合轴线（置信度 高） -->
+  <joint name="R7" type="revolute">
+    <parent link="B5"/>
+    <child link="B7"/>
+    <origin xyz="0.0257063 0.0123621 -0.084181" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-2.9" upper="2.9" effort="60" velocity="3.0"/>
+  </joint>
+  <!-- R8: SolidWorks 配合轴线（置信度 高） -->
+  <joint name="R8" type="revolute">
+    <parent link="B5"/>
+    <child link="B8"/>
+    <origin xyz="0.0257063 -0.0596379 -0.084181" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-2.9" upper="2.9" effort="60" velocity="3.0"/>
+  </joint>
+  <!-- L2: SolidWorks 配合轴线（置信度 高） -->
+  <joint name="L2" type="prismatic">
+    <parent link="B7"/>
+    <child link="B9"/>
+    <origin xyz="-0.0492 0.0004 -0.1052" rpy="0 0 0"/>
+    <axis xyz="0.274312 0 0.961641"/>
+    <limit lower="-0.1" upper="0.1" effort="200" velocity="0.5"/>
+  </joint>
+  <!-- R10: SolidWorks 配合轴线（置信度 高） -->
+  <joint name="R10" type="revolute">
+    <parent link="B9"/>
+    <child link="B11"/>
+    <origin xyz="-0.018 -0.0124 -0.0591" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-2.9" upper="2.9" effort="60" velocity="3.0"/>
+  </joint>
+  <!-- L3: SolidWorks 配合轴线（置信度 高） -->
+  <joint name="L3" type="prismatic">
+    <parent link="B8"/>
+    <child link="B10"/>
+    <origin xyz="-0.0585 0.0033 -0.1039" rpy="0 0 0"/>
+    <axis xyz="0.161706 0 0.986839"/>
+    <limit lower="-0.1" upper="0.1" effort="200" velocity="0.5"/>
+  </joint>
+</robot>
