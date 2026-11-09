@@ -253,7 +253,7 @@ def compute_q0_model():
             v = w[k]
             mp = v.get("mass_props") or []
             R_q0, t_q0 = get_q0_rt(k, bid)
-            f = stl_map.get(k)
+            f = os.path.join(HERE, "stl", os.path.basename(stl_map.get(k, "")))
             bname = os.path.basename(f)
             shift = EXACT_SHIFTS[bname]
             if len(mp) >= 12 and mp[5] and mp[5] > 0:
