@@ -96,7 +96,6 @@ cd D:\robotics\linrot-arm\model
 | `tools_verify.py` | 总校验 |
 | `tools_check_deep.py` | 深度校验 |
 | `tools_preview.py` | 出预览图与参考图对比 |
-| `_legacy/` | 12 刚体时代的构建脚本与调试图，勿再运行 |
 
 重建：
 
@@ -110,4 +109,3 @@ cd D:\robotics\linrot-arm\model
 - **没有 `armature`**，质量矩阵条件数 3.1e6，直接做动力学仿真会飘。
 - **没有 actuator**，`view.py` 因此默认关重力。
 - **没有碰撞体**，`geom contype=0`，不做碰撞检测。
-- `meshes_mm_backup/` 是毫米制备份，仅存档用，URDF 不引用。

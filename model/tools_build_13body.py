@@ -312,15 +312,13 @@ def build_all(out_dir=V2_DIR):
     links, stations = compute_q0_model()
 
     mesh_dir = os.path.join(out_dir, "meshes")
-    bak_dir = os.path.join(out_dir, "meshes_mm_backup")
     urdf_dir = os.path.join(out_dir, "urdf")
     mjcf_dir = os.path.join(out_dir, "mjcf")
     os.makedirs(mesh_dir, exist_ok=True)
-    os.makedirs(bak_dir, exist_ok=True)
     os.makedirs(urdf_dir, exist_ok=True)
     os.makedirs(mjcf_dir, exist_ok=True)
 
-    # 1. Export meshes in mm (backup) and m (primary)
+    # 1. Export meshes in meters
     mesh_files = []
     for i in range(13):
         bid = f"B{i}"
@@ -340,7 +338,6 @@ def build_all(out_dir=V2_DIR):
         b_mm = merged_mm.bounds
         inside = np.all(com_rel_mm >= b_mm[0] - 1.0) and np.all(com_rel_mm <= b_mm[1] + 1.0)
         print(f"  {bid:3s}: m={L['m']:.4f} kg, parts={len(L['parts'])}, com_in_bbox={inside}, ext_mm={np.round(b_mm[1]-b_mm[0],1)}")
-        merged_mm.export(os.path.join(bak_dir, f"{bid}.stl"))
 
         merged_m = merged_mm.copy()
         merged_m.apply_scale(0.001)

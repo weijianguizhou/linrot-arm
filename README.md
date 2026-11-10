@@ -47,13 +47,11 @@ linrot-arm/
 │  ├─ tools_build_13body.py   由 CAD 数据重建整套模型
 │  ├─ tools_verify.py         总校验
 │  ├─ tools_check_deep.py     深度校验
-│  ├─ tools_preview.py        重出预览图
-│  └─ _legacy/                旧的 12 刚体构建脚本
-├─ sim/                 view.py（开界面）、check_model.py（9 节动力学校验）、adams/
+│  └─ tools_preview.py        重出预览图
+├─ sim/                 view.py（开界面）、check_model.py（9 节动力学校验）
 ├─ build/data/          world_raw.json、mate_graph.json、frames.json、stl_map.json、stl/
 ├─ cad/                 SolidWorks 源件（3 个 SLDASM + 24 个 SLDPRT）
-├─ docs/                手臂动力学模型.png/.vsdx、手臂动力学拓扑图.png/.vsdx、零件归属确认表.xlsx
-└─ deprecated/          三个早期的错误 URDF 版本
+└─ docs/                手臂动力学模型.png/.vsdx、手臂动力学拓扑图.png/.vsdx、零件归属确认表.xlsx
 ```
 
 ## 3. 快速开始

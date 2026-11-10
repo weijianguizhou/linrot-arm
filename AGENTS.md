@@ -23,7 +23,6 @@ model/mjcf/linear_arm.xml
 model/loops.yaml
 model/mapping.json
 model/meshes/*.stl
-model/meshes_mm_backup/*.stl
 ```
 
 要改模型，改 `model/tools_build_13body.py`，然后重新构建：
