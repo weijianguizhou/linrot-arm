@@ -20,7 +20,7 @@
 
 **有效自由度 = 6**：12 个树关节 − 3 个闭环约束 = 6，已用闭环约束 Jacobian 求秩验证。
 
-刚体划分 13 个（`B0..B12`），与 `docs/手臂动力学模型.png` 的标号完全对应。
+刚体划分 13 个（`B0..B12`），与 `model/docs/手臂动力学模型.png` 的标号完全对应。
 总质量 **6.3624 kg**（CAD 真值），惯量用 CAD 完整张量（含非对角项）。
 
 肩部三条轴在 CAD 里并不是正放的：
@@ -31,30 +31,46 @@
 | 肩 2 | `[0.991445, -0.130526, 0]` | 同上，与之正交 |
 | 肩 3 | `[0, 0, 1]` | `EC-A3814`，竖直，与配合 `同心532` 一致 |
 
-## 2. 目录
+## 2. 预览
+
+`q=0` 零位姿态（MuJoCo 渲染）：
+
+![零位四视图](model/preview/p_zero_4view.png)
+
+与 `model/docs/手臂动力学模型.png` 参考图对比：
+
+![参考图对比](model/preview/compare_photo.png)
+
+13 个刚体标号：
+
+![B0..B12 标号](model/preview/labeled_B0_B12.png)
+
+## 3. 目录
 
 ```
 linrot-arm/
 ├─ README.md            本文件：项目说明、进度、待办
 ├─ AGENTS.md            给 AI 助手的交接说明（新会话必读）
-├─ model/               URDF / MJCF / 网格 / 重建与校验工具   ← 主要工作区
+├─ model/               模型、CAD 数据与重建/校验工具   ← 主要工作区
 │  ├─ urdf/linear_arm.urdf
 │  ├─ mjcf/linear_arm.xml
 │  ├─ meshes/           B0..B12.stl（米制）
 │  ├─ loops.yaml        3 个闭环关节的锚点与轴向
 │  ├─ mapping.json      每个刚体的零件构成、质量、质心、站位
 │  ├─ preview/          预览图（四视图、参考图对比、B0..B12 标注）
+│  ├─ build/data/       world_raw.json、mate_graph.json、frames.json、stl_map.json、stl/
+│  ├─ cad/              SolidWorks 源件（3 个 SLDASM + 24 个 SLDPRT）
+│  ├─ docs/             手臂动力学模型.png/.vsdx、手臂动力学拓扑图.png/.vsdx、零件归属确认表.xlsx
 │  ├─ tools_build_13body.py   由 CAD 数据重建整套模型
 │  ├─ tools_verify.py         总校验
 │  ├─ tools_check_deep.py     深度校验
 │  └─ tools_preview.py        重出预览图
-├─ sim/                 view.py（开界面）、check_model.py（9 节动力学校验）
-├─ build/data/          world_raw.json、mate_graph.json、frames.json、stl_map.json、stl/
-├─ cad/                 SolidWorks 源件（3 个 SLDASM + 24 个 SLDPRT）
-└─ docs/                手臂动力学模型.png/.vsdx、手臂动力学拓扑图.png/.vsdx、零件归属确认表.xlsx
+├─ sim/                 仿真：view.py（开界面）、check_model.py（9 节动力学校验）
+├─ control/             电控代码（待加入）
+└─ vision/              视觉代码（待加入）
 ```
 
-## 3. 快速开始
+## 4. 快速开始
 
 ```powershell
 $PY = "D:\ANACONDA\envs\mujoco\python.exe"
@@ -72,7 +88,7 @@ WSL 下同样可用（`mujoco 3.16.0` 与 Windows `3.14.0` 数值逐项一致）
 python sim/check_model.py
 ```
 
-## 4. 当前进度
+## 5. 当前进度
 
 ### 已完成
 
@@ -82,7 +98,7 @@ python sim/check_model.py
 - **肩部三轴定标**：用电机网格做最小二乘圆拟合，再用"电机→法兰共轴链"验证
   （垂直偏差 0.008 mm / 0.039 mm），修正了原先 7.5° 的轴向错误和 40 mm 以上的轴点偏移。
 - **零位姿态**：`q=0` 为参考图的竖直伸展姿态，13 刚体 FK 对 CAD 最大偏差 **0.013 mm**。
-- **可复现构建**：`model/tools_build_13body.py` 能从 `build/data/` 从头重建
+- **可复现构建**：`model/tools_build_13body.py` 能从 `model/build/data/` 从头重建
   网格、URDF、MJCF、`loops.yaml`、`mapping.json`。
 - **三套校验脚本**全部通过：
 
@@ -102,7 +118,7 @@ f8bb391  仓库改名为 linrot-arm，并去掉建模数据里的绝对路径
 f9e7208  初始导入（12 刚体版）
 ```
 
-## 5. 待办
+## 6. 待办
 
 ### 待外部确认
 
@@ -127,7 +143,7 @@ f9e7208  初始导入（12 刚体版）
 - 接口形式（倾向 `ros2_control` 的 `SystemInterface` 插件）。
 - 关节命名是否从 `R1..R12` 改成 `joint1..joint6`。
 
-## 6. 设计决策
+## 7. 设计决策
 
 | 项目 | 决定 |
 | :--- | :--- |
@@ -139,7 +155,7 @@ f9e7208  初始导入（12 刚体版）
 | 控制器对接 | ROS 2 节点 |
 | 验收标准 | 先跑通，后续边学边优化 |
 
-## 7. 仓库与大文件
+## 8. 仓库与大文件
 
 网格与 CAD 走 Git LFS，代码与元数据是普通文件。
 
@@ -164,7 +180,7 @@ git config --global http.proxy http://127.0.0.1:7890
 git config --global https.proxy http://127.0.0.1:7890
 ```
 
-## 8. 已知的坑
+## 9. 已知的坑
 
 - **`world_raw.json` 里存的是转置矩阵**。SolidWorks `IMathTransform.ArrayData` 的前 9 个数
   是局部基向量在装配体系下的分量（变换矩阵的**列**），导出脚本按**行**填了，
@@ -173,4 +189,4 @@ git config --global https.proxy http://127.0.0.1:7890
   关节 `rpy` 全为 0，轴向量必须写世界方向。
 - **STL 被导到第一卦限**，要用 `trimesh.center_mass`（体积质心）算平移量，
   不能用 `trimesh.centroid`（面积加权，非对称件会差 15 mm）。
-- **`build/data/stl_map.json` 用的是纯文件名**，不要写回绝对路径，否则 WSL 下会失效。
+- **`model/build/data/stl_map.json` 用的是纯文件名**，不要写回绝对路径，否则 WSL 下会失效。

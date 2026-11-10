@@ -1,7 +1,10 @@
 # model —— 13 刚体 URDF / MJCF
 
-与 `../docs/手臂动力学模型.png` 完全对应的模型。13 刚体（`B0..B12`）、
+与 `docs/手臂动力学模型.png` 完全对应的模型。13 刚体（`B0..B12`）、
 12 个树关节 + 3 个闭环关节，`q=0` 为零位竖直姿态。
+
+模型目录还包含 `build/data/`（重建源数据）、`cad/`（SolidWorks 源件）、
+`docs/`（参考图与零件表）。
 
 ## 1. 坐标约定
 
@@ -92,7 +95,7 @@ cd D:\robotics\linrot-arm\model
 
 | 文件 | 用途 |
 | :--- | :--- |
-| `tools_build_13body.py` | 从 `../build/data/world_raw.json` + `stl/` 重建整套模型 |
+| `tools_build_13body.py` | 从 `build/data/world_raw.json` + `stl/` 重建整套模型 |
 | `tools_verify.py` | 总校验 |
 | `tools_check_deep.py` | 深度校验 |
 | `tools_preview.py` | 出预览图与参考图对比 |

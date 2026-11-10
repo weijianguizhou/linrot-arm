@@ -12,6 +12,7 @@
 - 12 个树关节 + 3 个闭环约束（`R6`、`R10`、`R12`）
 - 有效自由度 6
 - 总质量 6.3624 kg（CAD 真值）
+- 目录：`model/` 模型与 CAD 数据，`sim/` 仿真；`control/`、`vision/` 预留给电控与视觉代码
 
 ## 不要手改这些文件
 
@@ -45,7 +46,7 @@ cd D:\robotics\linrot-arm
 
 ## 建模约定（违反就会整体错位）
 
-1. **`build/data/world_raw.json` 里的旋转是转置的**。
+1. **`model/build/data/world_raw.json` 里的旋转是转置的**。
    `world[:3,:3]` 实际是 `R^T`，真实旋转必须用 `R_true = world[:3,:3].T`。
 2. **网格按 CAD 世界姿态烘焙**，只平移不平移旋转。所以 `q=0` 时所有 body 帧同向、
    关节 `rpy` 全 0，关节轴必须写**世界方向**。
@@ -53,7 +54,7 @@ cd D:\robotics\linrot-arm
    CAD 坐标换算 URDF 坐标要减去 `mapping.json["B0"]["origin_mm"]`。
 4. **每个刚体的 link 原点 = 驱动它的那个关节的轴点**（构建脚本 `stations` 段）。
 5. **STL 平移量用体积质心** `trimesh.center_mass`，不是 `trimesh.centroid`。
-6. **`build/data/stl_map.json` 只存文件名**，不要写回绝对路径（WSL 下会炸）。
+6. **`model/build/data/stl_map.json` 只存文件名**，不要写回绝对路径（WSL 下会炸）。
 
 ## 环境
 
@@ -74,7 +75,7 @@ cd D:\robotics\linrot-arm
 
 ## 下一步该做什么
 
-优先级见 `README.md` 第 5 节。当前 P0 是：
+优先级见 `README.md` 第 6 节。当前 P0 是：
 
 1. 关节限位（`<limit>` / `range`）— 需要型号手册数据
 2. `armature` — 质量矩阵条件数 3.1e6，否则数值发飘

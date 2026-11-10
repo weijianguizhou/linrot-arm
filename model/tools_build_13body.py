@@ -6,7 +6,7 @@ import trimesh
 import mujoco
 
 _MODEL = os.path.dirname(os.path.abspath(__file__))
-HERE = os.path.join(os.path.dirname(_MODEL), "build", "data")
+HERE = os.path.join(_MODEL, "build", "data")
 V2_DIR = _MODEL
 
 # Exact STL positive-octant shifts (mm): p_stl - p_loc

@@ -13,7 +13,7 @@ from PIL import ImageDraw, ImageFont
 
 V2 = os.path.dirname(os.path.abspath(__file__))
 URDF = os.path.join(V2, "urdf", "linear_arm.urdf")
-PHOTO = os.path.join(os.path.dirname(V2), "docs", "手臂动力学模型.png")
+PHOTO = os.path.join(V2, "docs", "手臂动力学模型.png")
 OUT = os.path.join(V2, "preview")
 os.makedirs(OUT, exist_ok=True)
 S = 600
