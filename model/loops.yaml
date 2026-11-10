@@ -1,8 +1,8 @@
 [
  {
-  "joint": "R5",
-  "parent": "B2",
-  "child": "B5",
+  "joint": "R6",
+  "parent": "B3",
+  "child": "B6",
   "type": "revolute",
   "origin_mm": [
    -75.898,
@@ -11,8 +11,8 @@
   ],
   "origin_parent_mm": [
    13.0,
-   0.0,
-   -309.888
+   -0.0,
+   -318.598
   ],
   "origin_child_mm": [
    20.5,
@@ -27,9 +27,9 @@
   "note": "闭环约束关节：URDF 树里没有，需在 MuJoCo/SDF 用 equality/joint 补"
  },
  {
-  "joint": "R9",
-  "parent": "B6",
-  "child": "B11",
+  "joint": "R10",
+  "parent": "B7",
+  "child": "B12",
   "type": "revolute",
   "origin_mm": [
    -49.116,
@@ -54,9 +54,9 @@
   "note": "闭环约束关节：URDF 树里没有，需在 MuJoCo/SDF 用 equality/joint 补"
  },
  {
-  "joint": "R11",
-  "parent": "B10",
-  "child": "B11",
+  "joint": "R12",
+  "parent": "B11",
+  "child": "B12",
   "type": "revolute",
   "origin_mm": [
    -89.116,

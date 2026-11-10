@@ -143,18 +143,22 @@ def main():
         if j["type"] == "fixed":
             continue
         p = pos[j["parent"]] + j["xyz"]
-        row = []
+        row, ds = [], []
         for side in ("parent", "child"):
             bb = bbox_of(j[side])
             if bb is None:
                 row.append("  n/a")
+                ds.append(0.0)
                 continue
             rel = p - pos[j[side]]
             out = np.maximum(np.maximum(bb[0] - rel, rel - bb[1]), 0.0)
             d = float(np.linalg.norm(out))
+            ds.append(d)
             row.append(f"{d * 1000.0:6.2f}")
-            if d > tol:
-                problems.append(f"{n} 站位在 {j[side]} 包围盒外 {d * 1000.0:.1f} mm")
+        # 转动副的轴点可以落在父件里（例如电机转子与法兰的交界面），
+        # 因此只要在父、子任一件的包围盒内就算合理；两边都出盒才报错。
+        if min(ds) > tol:
+            problems.append(f"{n} 站位在父、子包围盒外 {min(ds) * 1000.0:.1f} mm")
         print(f"  {n:4s} {j['parent']}->{j['child']}  出盒距离=[{row[0]}, {row[1]}] mm")
 
     # ---------------- 4. 尺度

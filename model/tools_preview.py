@@ -13,7 +13,7 @@ from PIL import ImageDraw, ImageFont
 
 V2 = os.path.dirname(os.path.abspath(__file__))
 URDF = os.path.join(V2, "urdf", "linear_arm.urdf")
-PHOTO = r"D:\robotics\手臂动力学模型.png"
+PHOTO = os.path.join(os.path.dirname(V2), "docs", "手臂动力学模型.png")
 OUT = os.path.join(V2, "preview")
 os.makedirs(OUT, exist_ok=True)
 S = 600
@@ -154,7 +154,7 @@ def main():
     for az, el, im in imgs:
         im.save(os.path.join(OUT, f"p_zero_az{az:03d}.png"))
 
-    # 刚体编号标注图（B0..B11）
+    # 刚体编号标注图（B0..B12）
     cam.azimuth, cam.elevation = 0, -6
     scn = mujoco.MjvScene(m, maxgeom=20000)
     opt = mujoco.MjvOption()
@@ -167,7 +167,7 @@ def main():
     dr = ImageDraw.Draw(lab)
     f12 = font(16, bold=True)
     # 左右交替 + 纵向错开，避免引线交叉
-    for i in range(12):
+    for i in range(13):
         name = f"B{i}"
         if name not in com:
             continue
@@ -183,7 +183,7 @@ def main():
         tw = dr.textlength(name, font=f12)
         dr.text((tx + 3 if side > 0 else tx - tw - 3, ty - 9), name,
                 fill=(200, 40, 40), font=f12)
-    p3 = os.path.join(OUT, "labeled_B0_B11.png")
+    p3 = os.path.join(OUT, "labeled_B0_B12.png")
     lab.save(p3)
     print("saved", p3)
 

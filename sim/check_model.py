@@ -17,7 +17,7 @@ V2 = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "
 MJCF = os.path.join(V2, "mjcf", "linear_arm.xml")
 URDF = os.path.join(V2, "urdf", "linear_arm.urdf")
 
-BODIES = [f"B{i}" for i in range(12)]
+BODIES = [f"B{i}" for i in range(13)]
 
 fails = []
 infos = []
@@ -78,7 +78,7 @@ def main():
     print(f"  总质量={m.body_mass.sum():.4f} kg  "
           f"（B0 已被 fusestatic 并入 world，mapping 合计 "
           f"{sum(v['mass_kg'] for v in mp.values()):.4f} kg）")
-    tag(m.njnt == 11, "树关节数 = 11", f"实际 {m.njnt}")
+    tag(m.njnt == 12, "树关节数 = 12", f"实际 {m.njnt}")
     tag(m.neq == 3, "闭环等式约束数 = 3", f"实际 {m.neq}")
     tag(m.nq == m.nv, "nq == nv（无四元数/自由关节）")
 
@@ -93,7 +93,7 @@ def main():
         got = d.xpos[bid(m, name)]
         err = float(np.linalg.norm(got - want)) * 1000.0
         worst = max(worst, err)
-    tag(worst < 0.05, "12 个刚体的 FK 站位与 CAD 一致", f"最大偏差 {worst:.3f} mm")
+    tag(worst < 0.05, "13 个刚体的 FK 站位与 CAD 一致", f"最大偏差 {worst:.3f} mm")
 
     # ---------------------------------------------------------------- 3
     print("\n=== 3. 闭环几何闭合（q=0） ===")
