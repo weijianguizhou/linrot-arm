@@ -1,7 +1,8 @@
-# model —— 13 刚体 URDF / MJCF
+# model —— 13 物理刚体 URDF / MJCF
 
-与 `docs/手臂动力学模型.png` 完全对应的模型。13 刚体（`B0..B12`）、
-12 个树关节 + 3 个闭环关节，`q=0` 为零位竖直姿态。
+与 `docs/手臂动力学模型.png` 完全对应的模型。13 个物理刚体（`B0..B12`）、
+12 个物理树关节 + 3 个闭环关节；腕部每根电缸杆端另有 3 个鱼眼铰（MJCF 虚拟体），
+`q=0` 为零位竖直姿态。
 
 模型目录还包含 `build/data/`（重建源数据）、`cad/`（SolidWorks 源件）、
 `docs/`（参考图与零件表）。
@@ -56,6 +57,22 @@
 | `R11` | revolute | `B10 → B12` | `[-0.00363561, 0, -0.0453832]` | `[0, 1, 0]` |
 | `L3` | prismatic | `B9 → B11` | `[-0.00958239, 0, -0.119617]` | `[-0.0798533, 0, -0.996807]` |
 
+> `L2` / `L3` 的滑动副在鱼眼之前；`B10` / `B11` 通过下面的 3 铰鱼眼与滑副相连。
+> 因此 MJCF 里 `L2g_slide` / `L3g_slide` 才是滑副体，`B10` / `B11` 的本体 `pos` 已改为 0。
+
+### 鱼眼铰（MJCF 虚拟体，6 个）
+
+| 关节 | 类型 | 父 → 子 | 轴 | 限位 |
+| :--- | :--- | :--- | :--- | :--- |
+| `L2g_gy` | hinge | `L2g_slide → L2g_gx` | `[0, 1, 0]` | ±0.5 rad |
+| `L2g_gx` | hinge | `L2g_gx → L2g_gz` | `[1, 0, 0]` | ±0.5 rad |
+| `L2g_gz` | hinge | `L2g_gz → B10` | `[0, 0, 1]` | ±0.5 rad |
+| `L3g_gy` | hinge | `L3g_slide → L3g_gx` | `[0, 1, 0]` | ±0.5 rad |
+| `L3g_gx` | hinge | `L3g_gx → L3g_gz` | `[1, 0, 0]` | ±0.5 rad |
+| `L3g_gz` | hinge | `L3g_gz → B11` | `[0, 0, 1]` | ±0.5 rad |
+
+> 限位 ±0.5 rad 是临时值，等鱼眼轴承型号/摆角规格确认后改 `GIMBAL_LIMIT`。
+
 三条肩轴值得注意的是**不是正交的**：电机 1 的轴绕 Z 偏了 7.5°（`sin 7.5° = 0.130526`），
 电机 2 的轴与它垂直、同样偏 7.5°。这是 CAD 里肩部电机堆叠的真实姿态，网格也按这个姿态烘焙，
 所以不能图省事写成 `[0,1,0]` / `[1,0,0]`。
@@ -70,7 +87,8 @@ URDF 是树，闭环在 `loops.yaml` 里描述、在 MJCF 里用 `<equality><con
 | `R10` | `B7 → B12` | `[-49.116, 137.015, -653.388]` | `[0, -1, 0]` | 腕十字轴第二轴 |
 | `R12` | `B11 → B12` | `[-89.116, 101.015, -653.388]` | `[0, -1, 0]` | 左推杆下端铰点 |
 
-`q=0` 时三个锚点残差 0.000 mm；约束 Jacobian 秩为 6，有效自由度 6。
+`q=0` 时三个锚点残差 0.000 mm；约束 Jacobian 秩为 8，总自由度 10
+（6 个任务自由度 + 4 个鱼眼/推杆被动自由度）；6 个执行器对 `B12` 的约化任务 Jacobian 秩为 6。
 
 ## 5. 校验
 
@@ -93,9 +111,18 @@ cd D:\robotics\linrot-arm\model
 
 ## 6. 工具
 
+模型数值的唯一可编辑源是 `templates/linear_arm.mjcf.tpl` 与
+`templates/linear_arm.urdf.tpl`。模板顶部用
+`<!--@ NAME = VALUE -->` 定义宏，正文用 `${NAME}` 引用；
+`tools_render_model.py` 负责把它们渲染成 `urdf/` 与 `mjcf/` 下的产物。
+
 | 文件 | 用途 |
 | :--- | :--- |
-| `tools_build_13body.py` | 从 `build/data/world_raw.json` + `stl/` 重建整套模型 |
+| `templates/*.tpl` | 带宏的模型模板（数值的唯一源） |
+| `cad_model.py` | 从 `build/data/` 计算质量、质心、惯量、站位 |
+| `tools_extract_params.py` | 打印/校对模板宏；`--write-metadata` 重建 `loops.yaml` / `mapping.json` |
+| `tools_export_meshes.py` | 从 CAD 导出 `meshes/B*.stl`（米制） |
+| `tools_render_model.py` | 渲染模板为 URDF / MJCF；`--check` 检查产物是否最新 |
 | `tools_verify.py` | 总校验 |
 | `tools_check_deep.py` | 深度校验 |
 | `tools_preview.py` | 出预览图与参考图对比 |
@@ -103,12 +130,15 @@ cd D:\robotics\linrot-arm\model
 重建：
 
 ```powershell
-& $PY -X utf8 .\tools_build_13body.py
+& $PY -X utf8 .\tools_extract_params.py --diff   # 可选：确认模板与 CAD 一致
+& $PY -X utf8 .\tools_export_meshes.py           # 仅 CAD 网格变化时
+& $PY -X utf8 .\tools_render_model.py            # 模板 -> urdf/mjcf
 ```
 
 ## 7. 已知限制
 
-- **没有 `<limit>`**，关节在 MuJoCo 里是无界的。等型号手册确认行程后补。
-- **没有 `armature`**，质量矩阵条件数 3.1e6，直接做动力学仿真会飘。
+- **关节限位是占位值**：旋转 ±2.9 rad、移动 ±0.1 m。等型号手册确认行程后，
+  改模板顶部的 `REV_LOWER` / `REV_UPPER` / `SLIDE_LOWER` / `SLIDE_UPPER` 宏。
+- **`armature` 仍为 0**，质量矩阵条件数 3.1e6，直接做动力学仿真会飘。
 - **没有 actuator**，`view.py` 因此默认关重力。
 - **没有碰撞体**，`geom contype=0`，不做碰撞检测。

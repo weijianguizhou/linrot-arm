@@ -1,0 +1,143 @@
+<mujoco model="linear_arm">
+  <compiler angle="radian" meshdir="../meshes" autolimits="true" />
+  <option gravity="0 0 -9.81" />
+  <visual>
+    <global offwidth="1400" offheight="1400" />
+    <headlight ambient="0.35 0.35 0.35" diffuse="0.6 0.6 0.6" specular="0.1 0.1 0.1" />
+    <map znear="0.01" zfar="20" />
+  </visual>
+
+  <default>
+    
+    <joint damping="0.05" armature="0.0" />
+    
+    <geom type="mesh" contype="0" conaffinity="0" group="1" material="body_grey" />
+    <default class="rev">
+      <joint type="hinge" range="-2.9 2.9" />
+    </default>
+    <default class="slide">
+      <joint type="slide" range="-0.1 0.1" />
+    </default>
+  </default>
+
+  <asset>
+    <material name="body_grey" rgba="0.7 0.7 0.72 1" />
+    <mesh name="B0_mesh" file="B0.stl" />
+    <mesh name="B1_mesh" file="B1.stl" />
+    <mesh name="B2_mesh" file="B2.stl" />
+    <mesh name="B3_mesh" file="B3.stl" />
+    <mesh name="B4_mesh" file="B4.stl" />
+    <mesh name="B5_mesh" file="B5.stl" />
+    <mesh name="B6_mesh" file="B6.stl" />
+    <mesh name="B7_mesh" file="B7.stl" />
+    <mesh name="B8_mesh" file="B8.stl" />
+    <mesh name="B9_mesh" file="B9.stl" />
+    <mesh name="B10_mesh" file="B10.stl" />
+    <mesh name="B11_mesh" file="B11.stl" />
+    <mesh name="B12_mesh" file="B12.stl" />
+  </asset>
+
+  <worldbody>
+    
+    <body name="B0">
+      <inertial pos="0.00199376 0.0149344 -9.28886e-05" mass="0.640000" fullinertia="5.054564e-04 4.618816e-04 5.076499e-04 -6.805731e-06 8.319443e-07 3.106859e-06" />
+      <geom name="B0_geom" mesh="B0_mesh" />
+
+      
+      <body name="B1">
+        <joint name="R1" class="rev" axis="0.130526 0.991445 0" />
+        <inertial pos="0.0212886 0.0938392 -0.0209183" mass="0.938862" fullinertia="2.193144e-03 2.213321e-03 8.211174e-04 2.366851e-05 3.952843e-04 -1.919700e-05" />
+        <geom name="B1_geom" mesh="B1_mesh" />
+
+        
+        <body name="B2" pos="-0.000163 0.098357 0">
+          <joint name="R2" class="rev" axis="0.991445 -0.130526 0" />
+          <inertial pos="0.00554114 -0.0004987 -0.0936251" mass="0.536485" fullinertia="4.697595e-04 4.622306e-04 2.181586e-04 -1.324272e-06 -1.110579e-05 4.049904e-06" />
+          <geom name="B2_geom" mesh="B2_mesh" />
+
+          
+          <body name="B3" pos="0.007431 -0.000978 -0.095902">
+            <joint name="R3" class="rev" axis="0 0 1" />
+            <inertial pos="0.0410789 -9.3314e-08 -0.16692" mass="0.693504" fullinertia="7.248301e-03 7.466091e-03 4.479889e-04 -2.889562e-10 -1.417894e-04 -2.680659e-09" />
+            <geom name="B3_geom" mesh="B3_mesh" />
+
+            
+            <body name="B4" pos="-1.4e-07 -3e-08 -0.0710983">
+              <joint name="R4" class="rev" axis="0 1 0" />
+              <inertial pos="-0.00339789 5.18373e-06 -0.124467" mass="1.655451" fullinertia="4.619909e-03 4.623260e-03 5.253852e-04 -4.467168e-08 -1.107919e-04 6.394150e-07" />
+              <geom name="B4_geom" mesh="B4_mesh" />
+
+              
+              <body name="B5" pos="-0.00617502 -6.68732e-10 -0.224006">
+                <joint name="L1" class="slide" axis="-0.0275558 -2.98419e-09 -0.99962" />
+                <inertial pos="-0.0010802 1.14609e-08 -0.0369863" mass="0.024928" fullinertia="9.618326e-06 8.550634e-06 2.400692e-06 -8.728906e-09 -1.948029e-07 -2.033429e-09" />
+                <geom name="B5_geom" mesh="B5_mesh" />
+
+                
+                <body name="B6" pos="-0.00132494 -1.43486e-10 -0.0480638">
+                  <joint name="R5" class="rev" axis="0 1 0" />
+                  <inertial pos="0.0477517 -3.52953e-08 -0.0945253" mass="0.660446" fullinertia="4.068980e-03 4.276690e-03 4.055850e-04 -1.058340e-10 -3.342091e-05 -3.422278e-09" />
+                  <geom name="B6_geom" mesh="B6_mesh" />
+
+                  
+                  <body name="B7" pos="0.057282 0 -0.24743">
+                    <joint name="R7" class="rev" axis="-1 0 0" />
+                    <inertial pos="0.00143629 2.84217e-17 3.027e-11" mass="0.013479" fullinertia="6.213311e-07 2.347898e-06 2.797525e-06 -1.950193e-22 -4.422111e-14 -3.493028e-13" />
+                    <geom name="B7_geom" mesh="B7_mesh" />
+
+                  </body>
+
+                  
+                  <body name="B8" pos="0.0205 0.036 -0.08243">
+                    <joint name="R8" class="rev" axis="0 1 0" />
+                    <inertial pos="-0.00570782 1.7684e-05 -0.0706078" mass="0.540000" fullinertia="7.211051e-05 7.256674e-05 1.079676e-05 1.062342e-08 -5.023540e-06 2.329981e-08" />
+                    <geom name="B8_geom" mesh="B8_mesh" />
+
+                    
+                    <body name="L2g_slide" pos="-0.00958239 0 -0.119617"><joint name="L2" class="slide" axis="-0.0798533 0 -0.996807" />
+                      <inertial pos="0 0 0" mass="1e-06" diaginertia="1e-9 1e-9 1e-9" /><body name="L2g_gy" pos="0 0 0"><joint name="L2g_gy" type="hinge" axis="0 1 0" damping="0" armature="1e-6" /><inertial pos="0 0 0" mass="1e-06" diaginertia="1e-9 1e-9 1e-9" /><body name="L2g_gx" pos="0 0 0"><joint name="L2g_gx" type="hinge" axis="1 0 0" damping="0" armature="1e-6" /><inertial pos="0 0 0" mass="1e-06" diaginertia="1e-9 1e-9 1e-9" /><body name="L2g_gz" pos="0 0 0"><joint name="L2g_gz" type="hinge" axis="0 0 1" damping="0" armature="1e-6" /><inertial pos="0 0 0" mass="1e-06" diaginertia="1e-9 1e-9 1e-9" /><body name="B10" pos="0 0 0">
+                      <inertial pos="-0.000373276 8.22244e-09 -0.00449624" mass="0.009826" fullinertia="1.043468e-05 1.056540e-05 3.278400e-07 -3.400169e-13 -8.095001e-07 -2.007156e-12" />
+                      <geom name="B10_geom" mesh="B10_mesh" />
+
+                      
+                      <body name="B12" pos="-0.00363561 0 -0.0453832">
+                        <joint name="R11" class="rev" axis="0 1 0" />
+                        <inertial pos="0.0267515 -0.0359999 -0.0129595" mass="0.099639" fullinertia="4.144548e-05 5.291078e-05 5.460237e-05 2.060831e-10 -1.713458e-05 -1.620054e-10" />
+                        <geom name="B12_geom" mesh="B12_mesh" />
+                      </body>
+                    </body>
+                  </body></body></body></body></body>
+
+                  
+                  <body name="B9" pos="0.0205 -0.036 -0.08243">
+                    <joint name="R9" class="rev" axis="0 1 0" />
+                    <inertial pos="-0.00560549 -1.7684e-05 -0.070616" mass="0.540000" fullinertia="7.213567e-05 7.256674e-05 1.077161e-05 6.778689e-09 -4.867544e-06 -2.469387e-08" />
+                    <geom name="B9_geom" mesh="B9_mesh" />
+
+                    
+                    <body name="L3g_slide" pos="-0.00958239 0 -0.119617"><joint name="L3" class="slide" axis="-0.0798533 0 -0.996807" />
+                      <inertial pos="0 0 0" mass="1e-06" diaginertia="1e-9 1e-9 1e-9" /><body name="L3g_gy" pos="0 0 0"><joint name="L3g_gy" type="hinge" axis="0 1 0" damping="0" armature="1e-6" /><inertial pos="0 0 0" mass="1e-06" diaginertia="1e-9 1e-9 1e-9" /><body name="L3g_gx" pos="0 0 0"><joint name="L3g_gx" type="hinge" axis="1 0 0" damping="0" armature="1e-6" /><inertial pos="0 0 0" mass="1e-06" diaginertia="1e-9 1e-9 1e-9" /><body name="L3g_gz" pos="0 0 0"><joint name="L3g_gz" type="hinge" axis="0 0 1" damping="0" armature="1e-6" /><inertial pos="0 0 0" mass="1e-06" diaginertia="1e-9 1e-9 1e-9" /><body name="B11" pos="0 0 0">
+                      <inertial pos="-0.000373276 8.22244e-09 -0.00449624" mass="0.009826" fullinertia="1.043468e-05 1.056540e-05 3.278400e-07 -3.400169e-13 -8.095001e-07 -2.007156e-12" />
+                      <geom name="B11_geom" mesh="B11_mesh" />
+
+                    </body>
+                  </body></body></body></body></body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  
+  <equality>
+    
+    <connect name="loop_R6" body1="B3" body2="B6" anchor="0.013 0 -0.318598" />
+    
+    <connect name="loop_R10" body1="B7" body2="B12" anchor="-0.01 0 0" />
+    
+    <connect name="loop_R12" body1="B11" body2="B12" anchor="-0.003636 0 -0.045383" />
+  </equality>
+</mujoco>

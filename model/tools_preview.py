@@ -2,7 +2,8 @@
 """生成 v2 的预览图：零位四视图 + 与参考照片的对照。
 
 直接读 urdf/linear_arm.urdf（走 MuJoCo 的 URDF 导入），所以图里是什么，
-别人拿到这份 URDF 看到的就是什么。
+别人拿到这份 URDF 看到的就是什么。背景用 MuJoCo 例程那套渐变天空 +
+棋盘地面，只加在渲染层，不改 URDF，也不进动力学。
 """
 import os
 
@@ -17,6 +18,7 @@ PHOTO = os.path.join(V2, "docs", "手臂动力学模型.png")
 OUT = os.path.join(V2, "preview")
 os.makedirs(OUT, exist_ok=True)
 S = 600
+VIEW_EL = -22  # 相机略高于手臂，地平线落在手臂上方，棋盘地面铺在下方
 
 # 中文字体：找不到就退回默认字体（标题里只用 ASCII 也无所谓）
 _FONT = None
@@ -51,6 +53,33 @@ def scene_points(m, d):
         v = m.mesh_vert[va:va + vn]
         pts.append(v @ d.geom_xmat[g].reshape(3, 3).T + d.geom_xpos[g])
     return np.concatenate(pts)
+
+
+def classic_model(urdf_path, zmin):
+    """URDF 转成 MJCF spec，再套 MuJoCo 例程的天空盒和棋盘地面。"""
+    spec = mujoco.MjSpec.from_string(mujoco.MjSpec.from_file(urdf_path).to_xml())
+    spec.compiler.meshdir = os.path.dirname(urdf_path)
+    spec.add_texture(
+        name="skybox", type=mujoco.mjtTexture.mjTEXTURE_SKYBOX,
+        builtin=mujoco.mjtBuiltin.mjBUILTIN_GRADIENT,
+        rgb1=[0.3, 0.5, 0.7], rgb2=[0.0, 0.0, 0.0],
+        width=512, height=3072)
+    spec.add_texture(
+        name="groundplane", type=mujoco.mjtTexture.mjTEXTURE_2D,
+        builtin=mujoco.mjtBuiltin.mjBUILTIN_CHECKER,
+        mark=mujoco.mjtMark.mjMARK_EDGE,
+        rgb1=[0.2, 0.3, 0.4], rgb2=[0.1, 0.2, 0.3],
+        markrgb=[0.8, 0.8, 0.8], width=300, height=300)
+    # MjSpec 的 textures 从 role 0 起填，槽位 1 才是 RGB
+    spec.add_material(
+        name="groundplane", textures=["", "groundplane"],
+        texuniform=True, texrepeat=[5, 5], reflectance=0.2)
+    floor = spec.worldbody.add_geom(
+        name="floor", type=mujoco.mjtGeom.mjGEOM_PLANE,
+        size=[0, 0, 0.05], pos=[0, 0, zmin - 0.01],
+        contype=0, conaffinity=0, group=0)
+    floor.material = "groundplane"
+    return spec.compile()
 
 
 def link_world_positions(urdf_path):
@@ -96,7 +125,12 @@ def project(p, cam_pos, fwd, up, fovy_deg, size):
 
 
 def main():
-    m = mujoco.MjModel.from_xml_path(URDF)
+    m0 = mujoco.MjModel.from_xml_path(URDF)
+    d0 = mujoco.MjData(m0)
+    mujoco.mj_forward(m0, d0)
+    zmin = float(scene_points(m0, d0)[:, 2].min())
+
+    m = classic_model(URDF, zmin)
     m.vis.global_.offwidth = S
     m.vis.global_.offheight = S
     d = mujoco.MjData(m)
@@ -111,7 +145,7 @@ def main():
     cam.lookat[:] = center
     cam.distance = dist
 
-    views = [(0, -6), (90, -6), (180, -6), (270, -6)]
+    views = [(0, VIEW_EL), (90, VIEW_EL), (180, VIEW_EL), (270, VIEW_EL)]
     imgs = []
     for az, el in views:
         cam.azimuth = az
@@ -155,7 +189,7 @@ def main():
         im.save(os.path.join(OUT, f"p_zero_az{az:03d}.png"))
 
     # 刚体编号标注图（B0..B12）
-    cam.azimuth, cam.elevation = 0, -6
+    cam.azimuth, cam.elevation = 0, VIEW_EL
     scn = mujoco.MjvScene(m, maxgeom=20000)
     opt = mujoco.MjvOption()
     mujoco.mjv_updateScene(m, d, opt, None, cam, mujoco.mjtCatBit.mjCAT_ALL, scn)

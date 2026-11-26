@@ -78,7 +78,7 @@ def main():
     print(f"  总质量={m.body_mass.sum():.4f} kg  "
           f"（B0 已被 fusestatic 并入 world，mapping 合计 "
           f"{sum(v['mass_kg'] for v in mp.values()):.4f} kg）")
-    tag(m.njnt == 12, "树关节数 = 12", f"实际 {m.njnt}")
+    tag(m.njnt == 18, "树关节数 = 18（12 物理 + 6 鱼眼）", f"实际 {m.njnt}")
     tag(m.neq == 3, "闭环等式约束数 = 3", f"实际 {m.neq}")
     tag(m.nq == m.nv, "nq == nv（无四元数/自由关节）")
 
@@ -118,13 +118,35 @@ def main():
         mujoco.mj_jac(m, d, J2, None, p2, bid(m, lp["child"]))
         rows.append(J2 - J1)
     J = np.vstack(rows)
-    s = np.linalg.svd(J, compute_uv=False) if J.size else np.zeros(0)
+    U, s, Vt = np.linalg.svd(J, full_matrices=True)
     rank = int(np.sum(s > max(s.max() * 1e-6, 1e-8))) if s.size else 0
     dof = m.nv - rank
     print(f"  等式约束 Jacobian {J.shape}, 奇异值 = {np.round(s, 4)}")
-    print(f"  秩 = {rank}, 有效自由度 = nv - rank = {dof}")
-    tag(None, f"当前模型有效自由度 = {dof}",
-        "（若设计要求 3 肩 + 1 肘 + 2 腕 = 6，则缺一个肩部转轴）")
+    print(f"  秩 = {rank}, 总自由度 = nv - rank = {dof}")
+
+    # 6 个执行器能否控制 B12 的 6 维任务（鱼眼被动自由度不要求可控）
+    N = Vt[rank:].T
+    active = ["R1", "R2", "R3", "L1", "L2", "L3"]
+    E = np.zeros((len(active), m.nv))
+    for i, jn in enumerate(active):
+        jid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, jn)
+        E[i, m.jnt_dofadr[jid]] = 1.0
+    A = E @ N
+    sa = np.linalg.svd(A, compute_uv=False)
+    rank_a = int(np.sum(sa > max(sa.max() * 1e-6, 1e-8)))
+    print(f"  执行器零空间映射 E@N {A.shape}, 秩 = {rank_a}, 奇异值 = {np.round(sa, 4)}")
+
+    b12 = bid(m, "B12")
+    p12 = d.xpos[b12].copy()
+    Jp = np.zeros((3, m.nv))
+    Jr = np.zeros((3, m.nv))
+    mujoco.mj_jac(m, d, Jp, Jr, p12, b12)
+    Jt = np.vstack([Jp, Jr])
+    Jred = Jt @ N @ np.linalg.pinv(A, rcond=1e-8)
+    st = np.linalg.svd(Jred, compute_uv=False)
+    rank_t = int(np.sum(st > max(st.max() * 1e-6, 1e-8)))
+    print(f"  约化任务 Jacobian {Jred.shape}, 秩 = {rank_t}, 奇异值 = {np.round(st, 4)}")
+    tag(rank_t == 6, "6 个执行器可控制 6 维末端任务", f"任务秩 {rank_t}，总 DOF {dof}")
 
     # ---------------------------------------------------------------- 5
     print("\n=== 5. 质量矩阵 ===")
@@ -156,8 +178,8 @@ def main():
     m2.opt.integrator = mujoco.mjtIntegrator.mjINT_IMPLICIT
     m2.opt.timestep = 0.002
     d2.qpos[:] = 0.0
-    # 扰动：三个直线副各 +5 mm，腕部绕 R6 转 0.05 rad
-    for jn, val in (("L1", 0.005), ("L2", 0.005), ("L3", 0.005), ("R6", 0.05)):
+    # 扰动：三个直线副各 +5 mm，腕部绕 R7 转 0.05 rad
+    for jn, val in (("L1", 0.005), ("L2", 0.005), ("L3", 0.005), ("R7", 0.05)):
         jid = mujoco.mj_name2id(m2, mujoco.mjtObj.mjOBJ_JOINT, jn)
         d2.qpos[m2.jnt_qposadr[jid]] += val
     mujoco.mj_forward(m2, d2)

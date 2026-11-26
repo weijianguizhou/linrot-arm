@@ -1,13 +1,17 @@
+"""CAD 几何与质量属性的共享计算。
+
+本模块只负责从 SolidWorks 导出的 JSON 还原 q=0 竖直零位下的 13 个刚体
+（B0..B12）与 15 个关节站位。它不写任何模型文件；网格导出见
+``tools_export_meshes.py``，XML 渲染见 ``tools_render_model.py``。
+"""
+
 import json
 import os
-import shutil
-import numpy as np
-import trimesh
-import mujoco
 
-_MODEL = os.path.dirname(os.path.abspath(__file__))
-HERE = os.path.join(_MODEL, "build", "data")
-V2_DIR = _MODEL
+import numpy as np
+
+MODEL_DIR = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.join(MODEL_DIR, "build", "data")
 
 # Exact STL positive-octant shifts (mm): p_stl - p_loc
 EXACT_SHIFTS = {
@@ -58,6 +62,7 @@ JOINTS = [
     ("R12", "B11", "B12", "revolute"),   # 腕左推杆下支点（闭环）
 ]
 CUTS = ["R6", "R10", "R12"]
+TREE_JOINTS = [j for j in JOINTS if j[0] not in CUTS]
 
 BODY_PARTS = {
     "B0": [
@@ -134,8 +139,10 @@ def rot_between(a, b):
 
 
 def compute_q0_model():
-    w = json.load(open(os.path.join(HERE, "world_raw.json"), encoding="utf-8"))
-    stl_map = json.load(open(os.path.join(HERE, "stl_map.json"), encoding="utf-8"))
+    with open(os.path.join(HERE, "world_raw.json"), encoding="utf-8") as f:
+        w = json.load(f)
+    with open(os.path.join(HERE, "stl_map.json"), encoding="utf-8") as f:
+        stl_map = json.load(f)
 
     def get_true_rt(k):
         M = np.array(w[k]["world"])
@@ -222,6 +229,7 @@ def compute_q0_model():
             return R_b10_vert, t_b10_vert
         elif bid == "B12":
             return R_b11_vert, t_b11_vert
+        raise ValueError(f"未知刚体: {bid}")
 
     # Joint stations & axes in vertical q=0 pose
     # 肩部三条轴线完全由 CAD 配合链定出：
@@ -306,216 +314,3 @@ def compute_q0_model():
         links[bid] = dict(m=m_tot, com=com_tot, I=I_tot, origin=origin, parts=part_objs)
 
     return links, stations
-
-
-def build_all(out_dir=V2_DIR):
-    links, stations = compute_q0_model()
-
-    mesh_dir = os.path.join(out_dir, "meshes")
-    urdf_dir = os.path.join(out_dir, "urdf")
-    mjcf_dir = os.path.join(out_dir, "mjcf")
-    os.makedirs(mesh_dir, exist_ok=True)
-    os.makedirs(urdf_dir, exist_ok=True)
-    os.makedirs(mjcf_dir, exist_ok=True)
-
-    # 1. Export meshes in meters
-    mesh_files = []
-    for i in range(13):
-        bid = f"B{i}"
-        L = links[bid]
-        ms = []
-        for p in L["parts"]:
-            mm = trimesh.load(p["stl"], force="mesh")
-            mm.apply_translation(-p["shift"])
-            T = np.eye(4)
-            T[:3, :3] = p["R"]
-            T[:3, 3] = p["t"] - L["origin"]
-            mm.apply_transform(T)
-            ms.append(mm)
-        merged_mm = trimesh.util.concatenate(ms)
-        # Check COM inside bounds
-        com_rel_mm = L["com"] - L["origin"]
-        b_mm = merged_mm.bounds
-        inside = np.all(com_rel_mm >= b_mm[0] - 1.0) and np.all(com_rel_mm <= b_mm[1] + 1.0)
-        print(f"  {bid:3s}: m={L['m']:.4f} kg, parts={len(L['parts'])}, com_in_bbox={inside}, ext_mm={np.round(b_mm[1]-b_mm[0],1)}")
-
-        merged_m = merged_mm.copy()
-        merged_m.apply_scale(0.001)
-        merged_m.export(os.path.join(mesh_dir, f"{bid}.stl"))
-        L["mesh"] = f"../meshes/{bid}.stl"
-        mesh_files.append(f"{bid}.stl")
-
-    json.dump({"scaled_by": 0.001, "files": mesh_files},
-              open(os.path.join(mesh_dir, ".in_meters"), "w", encoding="utf-8"),
-              ensure_ascii=False, indent=1)
-
-    # 2. Write URDF
-    def fmt(v):
-        return " ".join(f"{float(x):.6g}" for x in v)
-
-    out = [
-        '<?xml version="1.0" encoding="utf-8"?>',
-        '<!-- 直线模组手臂 v2（精确对齐 手臂动力学模型.png 竖直标准零位 q=0）：',
-        '     * 13 刚体（B0..B12），15 关节（12 树关节 + 3 闭环关节 R6/R10/R12）',
-        '     * 肩部三轴：EC-A6013-1（7.5° 偏 Y）、EC-A6013-2（7.5° 偏 X）、EC-A3814（竖直）',
-        '     * 修正了 SolidWorks IMathTransform 旋转矩阵转置问题与 STL 体积质心偏移',
-        '     * 补全肩部双 EC-A6013 电机、抱箍与大臂电缸上下连接件 -->',
-        '<robot name="linear_arm">',
-        '  <link name="base_link" />',
-        '  <joint name="base_joint" type="fixed">',
-        '    <parent link="base_link" />',
-        '    <child link="B0" />',
-        '    <origin xyz="0 0 0" rpy="0 0 0" />',
-        '  </joint>',
-    ]
-    for i in range(13):
-        bid = f"B{i}"
-        L = links[bid]
-        I = L["I"]
-        com_rel_m = (L["com"] - L["origin"]) / 1000.0
-        out.append(f'  <link name="{bid}">')
-        out.append('    <visual>')
-        out.append('      <origin xyz="0 0 0" rpy="0 0 0" />')
-        out.append(f'      <geometry><mesh filename="{L["mesh"]}" /></geometry>')
-        out.append('      <material name="grey"><color rgba="0.7 0.7 0.72 1" /></material>')
-        out.append('    </visual>')
-        out.append('    <collision>')
-        out.append('      <origin xyz="0 0 0" rpy="0 0 0" />')
-        out.append(f'      <geometry><mesh filename="{L["mesh"]}" /></geometry>')
-        out.append('    </collision>')
-        out.append('    <inertial>')
-        out.append(f'      <origin xyz="{fmt(com_rel_m)}" rpy="0 0 0" />')
-        out.append(f'      <mass value="{L["m"]:.6f}" />')
-        out.append(f'      <inertia ixx="{I[0,0]:.6e}" ixy="{I[0,1]:.6e}" ixz="{I[0,2]:.6e}" '
-                   f'iyy="{I[1,1]:.6e}" iyz="{I[1,2]:.6e}" izz="{I[2,2]:.6e}" />')
-        out.append('    </inertial>')
-        out.append('  </link>')
-
-    for jn, par, ch, jt in JOINTS:
-        if jn in CUTS:
-            continue
-        s = stations[jn]
-        off_m = (s["p"] - links[par]["origin"]) / 1000.0
-        ax_u = s["a"] / np.linalg.norm(s["a"])
-        out.append(f'  <!-- {jn}: {s["src"]} -->')
-        out.append(f'  <joint name="{jn}" type="{jt}">')
-        out.append(f'    <parent link="{par}" />')
-        out.append(f'    <child link="{ch}" />')
-        out.append(f'    <origin xyz="{fmt(off_m)}" rpy="0 0 0" />')
-        out.append(f'    <axis xyz="{fmt(ax_u)}" />')
-        if jt == "prismatic":
-            out.append('    <limit lower="-0.1" upper="0.1" effort="200" velocity="0.5" />')
-        else:
-            out.append('    <limit lower="-2.9" upper="2.9" effort="60" velocity="3.0" />')
-        out.append('  </joint>')
-    out.append('</robot>')
-
-    urdf_path = os.path.join(urdf_dir, "linear_arm.urdf")
-    open(urdf_path, "w", encoding="utf-8").write("\n".join(out) + "\n")
-
-    # 3. Write loops.yaml
-    loops = []
-    for jn, par, ch, jt in JOINTS:
-        if jn in CUTS:
-            s = stations[jn]
-            par_o = links[par]["origin"]
-            ch_o = links[ch]["origin"]
-            ax_u = s["a"] / np.linalg.norm(s["a"])
-            loops.append(dict(
-                joint=jn,
-                parent=par,
-                child=ch,
-                type=jt,
-                origin_mm=[round(float(x), 3) for x in s["p"]],
-                origin_parent_mm=[round(float(x), 3) for x in (s["p"] - par_o)],
-                origin_child_mm=[round(float(x), 3) for x in (s["p"] - ch_o)],
-                axis=[round(float(x), 6) for x in ax_u],
-                note="闭环约束关节：URDF 树里没有，需在 MuJoCo/SDF 用 equality/joint 补"
-            ))
-    json.dump(loops, open(os.path.join(out_dir, "loops.yaml"), "w", encoding="utf-8"),
-              ensure_ascii=False, indent=1)
-
-    # 4. Write mapping.json
-    mp_out = {}
-    for i in range(13):
-        bid = f"B{i}"
-        L = links[bid]
-        mp_out[bid] = dict(
-            mass_kg=round(float(L["m"]), 6),
-            com_mm=[round(float(x), 2) for x in L["com"]],
-            parts=[p["name"] for p in L["parts"]],
-            origin_mm=[round(float(x), 2) for x in L["origin"]],
-            mesh=f"meshes/{bid}.stl"
-        )
-    json.dump(mp_out, open(os.path.join(out_dir, "mapping.json"), "w", encoding="utf-8"),
-              ensure_ascii=False, indent=1)
-
-    # 5. Write MJCF (linear_arm.xml)
-    def body_xml(bid, indent=4):
-        pad = " " * indent
-        L = links[bid]
-        com_rel_m = (L["com"] - L["origin"]) / 1000.0
-        I = L["I"]
-        # Use fullinertia for exact inertia tensor representation
-        fi = [I[0,0], I[1,1], I[2,2], I[0,1], I[0,2], I[1,2]]
-        lines = []
-        if bid == "B0":
-            lines.append(f'{pad}<body name="B0" pos="0 0 0">')
-        else:
-            pj = [jn for jn, par, ch, jt in JOINTS if ch == bid and jn not in CUTS][0]
-            par = [par for jn, par, ch, jt in JOINTS if jn == pj][0]
-            jt = [jt for jn, par, ch, jt in JOINTS if jn == pj][0]
-            s = stations[pj]
-            off_m = (s["p"] - links[par]["origin"]) / 1000.0
-            ax_u = s["a"] / np.linalg.norm(s["a"])
-            jtype = "slide" if jt == "prismatic" else "hinge"
-            jrange = "-0.1 0.1" if jt == "prismatic" else "-2.9 2.9"
-            lines.append(f'{pad}<body name="{bid}" pos="{fmt(off_m)}">')
-            lines.append(f'{pad}  <joint name="{pj}" type="{jtype}" pos="0 0 0" axis="{fmt(ax_u)}" range="{jrange}"/>')
-        lines.append(f'{pad}  <inertial pos="{fmt(com_rel_m)}" mass="{L["m"]:.6f}" fullinertia="{fmt(fi)}"/>')
-        lines.append(f'{pad}  <geom name="{bid}_geom" mesh="{bid}_mesh"/>')
-        # Recurse children in tree
-        for jn, par, ch, jt in JOINTS:
-            if par == bid and jn not in CUTS:
-                lines.extend(body_xml(ch, indent + 2))
-        lines.append(f'{pad}</body>')
-        return lines
-
-    mjcf_lines = [
-        '<mujoco model="linear_arm">',
-        '  <compiler angle="radian" meshdir="../meshes" autolimits="true"/>',
-        '  <option gravity="0 0 -9.81"/>',
-        '  <visual>',
-        '    <global offwidth="1400" offheight="1400"/>',
-        '    <headlight ambient="0.35 0.35 0.35" diffuse="0.6 0.6 0.6" specular="0.1 0.1 0.1"/>',
-        '    <map znear="0.01" zfar="20"/>',
-        '  </visual>',
-        '  <default>',
-        '    <joint damping="0.05" armature="0.0"/>',
-        '    <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="0.72 0.74 0.77 1"/>',
-        '  </default>',
-        '  <asset>',
-    ]
-    for i in range(13):
-        mjcf_lines.append(f'    <mesh name="B{i}_mesh" file="B{i}.stl" scale="1 1 1"/>')
-    mjcf_lines.append('  </asset>')
-    mjcf_lines.append('  <worldbody>')
-    mjcf_lines.extend(body_xml("B0", indent=4))
-    mjcf_lines.append('  </worldbody>')
-    mjcf_lines.append('')
-    mjcf_lines.append('  <!-- 闭环：URDF 树中切断的 R5 / R9 / R11，anchor 为 body1 局部坐标 (m) -->')
-    mjcf_lines.append('  <equality>')
-    for lp in loops:
-        jn, par, ch = lp["joint"], lp["parent"], lp["child"]
-        anc_m = np.array(lp["origin_parent_mm"]) / 1000.0
-        mjcf_lines.append(f'    <!-- {jn}: {par} -> {ch} (revolute, axis={lp["axis"]}) -->')
-        mjcf_lines.append(f'    <connect name="loop_{jn}" body1="{par}" body2="{ch}" anchor="{fmt(anc_m)}"/>')
-    mjcf_lines.append('  </equality>')
-    mjcf_lines.append('</mujoco>')
-
-    mjcf_path = os.path.join(mjcf_dir, "linear_arm.xml")
-    open(mjcf_path, "w", encoding="utf-8").write("\n".join(mjcf_lines) + "\n")
-    print("Successfully built URDF, MJCF, meshes, loops.yaml, and mapping.json in:", out_dir)
-
-if __name__ == "__main__":
-    build_all()

@@ -34,7 +34,7 @@ def parse():
                 os.path.join(os.path.dirname(URDF), g.get("filename")))
         if inert is not None:
             o = inert.find("origin")
-            xyz = np.array([float(x) for x in (o.get("xyz") if o is not None else "0 0 0").split()])
+            xyz = np.array([float(x) for x in ((o.get("xyz") if o is not None else None) or "0 0 0").split()])
             d["mass"] = float(inert.find("mass").get("value"))
             i = inert.find("inertia")
             I = np.array([[float(i.get("ixx")), float(i.get("ixy")), float(i.get("ixz"))],
@@ -49,8 +49,8 @@ def parse():
         joints[j.get("name")] = dict(
             type=j.get("type"), parent=j.find("parent").get("link"),
             child=j.find("child").get("link"),
-            xyz=np.array([float(x) for x in (o.get("xyz") if o is not None else "0 0 0").split()]),
-            rpy=np.array([float(x) for x in (o.get("rpy") if o is not None else "0 0 0").split()]),
+            xyz=np.array([float(x) for x in ((o.get("xyz") if o is not None else None) or "0 0 0").split()]),
+            rpy=np.array([float(x) for x in ((o.get("rpy") if o is not None else None) or "0 0 0").split()]),
             axis=np.array([float(x) for x in (a.get("xyz") if a is not None else "1 0 0").split()]))
     return links, joints
 

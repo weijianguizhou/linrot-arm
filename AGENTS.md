@@ -8,15 +8,15 @@
 一台混合驱动（直线电缸 + 旋转电机）六自由度机械臂的 URDF / MJCF 模型，
 用于**样机控制器的离线验证**。机构含 3 个闭环：肘部四连杆、腕部双电缸并联。
 
-- 13 个刚体 `B0..B12`
-- 12 个树关节 + 3 个闭环约束（`R6`、`R10`、`R12`）
-- 有效自由度 6
+- 13 个物理刚体 `B0..B12`；MJCF 另有 8 个鱼眼虚拟体
+- 12 个物理树关节 + 6 个鱼眼铰 + 3 个闭环约束（`R6`、`R10`、`R12`）
+- 任务自由度 6（总 DOF 10 = 6 任务 + 4 鱼眼/推杆被动）
 - 总质量 6.3624 kg（CAD 真值）
 - 目录：`model/` 模型与 CAD 数据，`sim/` 仿真；`control/`、`vision/` 预留给电控与视觉代码
 
 ## 不要手改这些文件
 
-它们是**生成物**，反手改会被下次构建覆盖：
+它们是**生成物**，反手改会被下次渲染覆盖：
 
 ```
 model/urdf/linear_arm.urdf
@@ -26,20 +26,31 @@ model/mapping.json
 model/meshes/*.stl
 ```
 
-要改模型，改 `model/tools_build_13body.py`，然后重新构建：
+模型数值的唯一源是 `model/templates/linear_arm.mjcf.tpl` 与
+`model/templates/linear_arm.urdf.tpl`：模板顶部用
+`<!--@ NAME = VALUE -->` 定义宏，正文用 `${NAME}` 引用。
+`model/tools_extract_params.py` 只报告 CAD 漂移，不会自动覆盖模板。
+
+改完模板后重新渲染：
 
 ```powershell
 $PY = "D:\ANACONDA\envs\mujoco\python.exe"    # WSL 下用 python
 cd D:\robotics\linrot-arm
-& $PY -X utf8 .\model\tools_build_13body.py
+& $PY -X utf8 .\model\tools_extract_params.py --diff   # 可选：模板数值 vs CAD
+& $PY -X utf8 .\model\tools_export_meshes.py           # 仅 CAD 网格变化时
+& $PY -X utf8 .\model\tools_render_model.py            # 模板 -> URDF / MJCF
 ```
+
+如果 CAD 的质量属性或站位确实变了，先跑
+`tools_extract_params.py --write-metadata` 重建 `loops.yaml` / `mapping.json`，
+再手工把新宏值同步进模板。
 
 ## 提交前必须跑这三条
 
 ```powershell
 & $PY -X utf8 .\model\tools_verify.py       # 期望：总判定: 通过
 & $PY -X utf8 .\model\tools_check_deep.py   # 期望：问题汇总: 无
-& $PY -X utf8 .\sim\check_model.py          # 期望：全部通过（有效自由度 6）
+& $PY -X utf8 .\sim\check_model.py          # 期望：全部通过（任务自由度 6）
 ```
 
 任何一条不通过，就不要提交。
@@ -77,7 +88,7 @@ cd D:\robotics\linrot-arm
 
 优先级见 `README.md` 第 6 节。当前 P0 是：
 
-1. 关节限位（`<limit>` / `range`）— 需要型号手册数据
+1. 关节限位（`<limit>` / `range`）— 已用占位值（±2.9 rad / ±0.1 m），等型号手册确认
 2. `armature` — 质量矩阵条件数 3.1e6，否则数值发飘
 3. `actuator` — 等电机控制组确认指令类型
 
