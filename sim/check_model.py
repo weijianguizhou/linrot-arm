@@ -176,7 +176,8 @@ def main():
     m2 = mujoco.MjModel.from_xml_path(MJCF)
     m2.opt.gravity[:] = 0.0
     m2.opt.integrator = mujoco.mjtIntegrator.mjINT_IMPLICIT
-    m2.opt.timestep = 0.002
+    # 用模型自己的步长（1 ms）。等式约束 solref=0.002，2 ms 步长会越过稳定边界。
+    m2.opt.timestep = m.opt.timestep
     d2.qpos[:] = 0.0
     # 扰动：三个直线副各 +5 mm，腕部绕 R7 转 0.05 rad
     for jn, val in (("L1", 0.005), ("L2", 0.005), ("L3", 0.005), ("R7", 0.05)):
@@ -184,11 +185,11 @@ def main():
         d2.qpos[m2.jnt_qposadr[jid]] += val
     mujoco.mj_forward(m2, d2)
     r0 = loop_residuals(m2, d2, loops)
-    for _ in range(1500):
+    for _ in range(3000):
         mujoco.mj_step(m2, d2)
     r1 = loop_residuals(m2, d2, loops)
     print(f"  扰动后 初始残差 = {np.round(r0, 2)} mm")
-    print(f"  1.5e3 步后 残差 = {np.round(r1, 3)} mm")
+    print(f"  3e3 步后 残差 = {np.round(r1, 3)} mm")
     tag(r1.max() < 0.5, "闭环约束能把机构拉回闭合", f"收敛后最大 {r1.max():.3f} mm")
 
     # ---------------------------------------------------------------- 8

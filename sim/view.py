@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """用 MuJoCo 交互界面查看 linear_arm_v2。
 
-默认关掉重力：模型里没有电机，一开重力整条手臂会直接垂下去，
-关掉之后手臂会停在当前姿态，用鼠标拖动就能摆姿势。
+默认关掉重力，方便静止观察和手动摆姿势。模型已配 6 个位置执行器，
+加 --gravity 时执行器会把初始姿态当作目标把手臂托住。
 
 默认铺 MuJoCo 例程里那套经典背景（渐变天空 + 棋盘地面）。它只加在
 渲染层，不参与碰撞，也不进动力学。
@@ -70,10 +70,17 @@ def _with_classic_background(path, m, d):
     return m_bg
 
 
+def _hold_current_pose(m, d):
+    """位置执行器默认 ctrl=0 会把关节拉回零位；这里改成保持当前姿态。"""
+    for i in range(m.nu):
+        jid = m.actuator_trnid[i, 0]
+        d.ctrl[i] = d.qpos[m.jnt_qposadr[jid]]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--gravity", action="store_true",
-                    help="保留 9.81 重力（默认关掉，方便静止观察）")
+                    help="保留 9.81 重力（执行器会把初始姿态当作目标保持）")
     ap.add_argument("--urdf", action="store_true", help="加载 URDF 而不是 MJCF")
     ap.add_argument("--no-bg", action="store_true",
                     help="不要经典背景，保持纯色底")
@@ -89,6 +96,7 @@ def main():
         m.opt.gravity[:] = 0.0
     d = mujoco.MjData(m)
     mujoco.mj_forward(m, d)
+    _hold_current_pose(m, d)
 
     m_view, d_view, bg = m, d, False
     if not args.no_bg:
@@ -100,12 +108,13 @@ def main():
                 m_bg.opt.gravity[:] = 0.0
             m_view, d_view = m_bg, mujoco.MjData(m_bg)
             mujoco.mj_forward(m_view, d_view)
+            _hold_current_pose(m_view, d_view)
             bg = True
 
     print(f"模型   : {path}")
     print(f"版本   : MuJoCo {mujoco.__version__}")
     print(f"规模   : nbody={m.nbody} njnt={m.njnt} nq={m.nq} neq={m.neq} "
-          f"ngeom={m.ngeom}")
+          f"nu={m.nu} ngeom={m.ngeom}")
     print(f"质量   : {m.body_mass.sum():.4f} kg")
     print(f"重力   : {m.opt.gravity}  "
           f"({'真实重力' if args.gravity else '已关闭'})")
