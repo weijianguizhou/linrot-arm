@@ -176,7 +176,7 @@ def sample_elbow(kin, q0, step_mm=0.5):
     kin.state_after(q0)
     out.append((0.0, kin.elbow_angle(), 0.0))
     n_neg = walk(-1, 200)
-    n_pos = walk(+1, 100)
+    n_pos = 0                     # 新限位 L1 <= 0，不向正半轴扫描
     arr = np.array(sorted(out))
     print(f"  负向走到 {n_neg * step_mm:.1f} mm，正向走到 {n_pos * step_mm:.1f} mm")
 
@@ -201,108 +201,92 @@ def sample_elbow(kin, q0, step_mm=0.5):
 
 
 # ---------------------------------------------------------------- 腕部采样
-def sample_wrist(kin, q0, half_mm=30.0, step_mm=2.5):
-    print(f"\n=== 2. 腕部 (L2,L3) -> 旋转矢量（±{half_mm:g} mm，"
+def sample_wrist(kin, q0, half_w_mm=40.0, step_mm=1.0):
+    """沿差动行程 w = L2 - L3 采样，锁和 L2 + L3 = 0。"""
+    print(f"\n=== 2. 腕部 w=L2-L3 -> 旋转矢量（±{half_w_mm:g} mm，"
           f"步长 {step_mm:g} mm） ===")
-    vals = np.arange(-half_mm, half_mm + 1e-9, step_mm) / 1000.0
+    vals = np.arange(-half_w_mm, half_w_mm + 1e-9, step_mm) / 1000.0
     n = len(vals)
-    rvec = np.full((n, n, 3), np.nan)
-    res = np.full((n, n), np.nan)
+    rvec = np.full((n, 3), np.nan)
+    res = np.full(n, np.nan)
     good = 0
-    for i, l2 in enumerate(vals):
-        for j, l3 in enumerate(vals):
-            q, ok = kin.move(q0, np.array([0, 0, 0, 0, l2, l3], float))
-            if not ok:
-                continue
-            kin.loop_rows(q)
-            rvec[i, j] = kin.wrist_rotvec()
-            res[i, j] = np.linalg.norm(kin.loop_rows(q)[1]) * 1000.0
-            good += 1
-    print(f"  有效点 {good}/{n*n}")
-    tag(good == n * n, "网格全部可达", f"{good}/{n*n}")
+    for i, w in enumerate(vals):
+        q, ok = kin.move(q0, np.array([0, 0, 0, 0, 0.5 * w, -0.5 * w], float))
+        if not ok:
+            continue
+        kin.loop_rows(q)
+        rvec[i] = kin.wrist_rotvec()
+        res[i] = np.linalg.norm(kin.loop_rows(q)[1]) * 1000.0
+        good += 1
+    print(f"  有效点 {good}/{n}")
+    tag(good == n, "差动行程全部可达", f"{good}/{n}")
     tag(bool(np.nanmax(res) < 1e-3), "闭环残差 < 1e-3 mm",
         f"最大 {np.nanmax(res):.2e} mm")
     return vals, rvec, res
 
 
 # ---------------------------------------------------------------- 多项式
-POLY_DEG = 5             # 五次（21 项）：四次最大约 9 mrad，五次约 4 mrad
-POLY_SCALE = 0.02        # 把 ±20 mm 归一化到 [-1,1]，改善最小二乘条件数
+POLY_DEG = 5             # 五次（6 项）：差动 1 维表足够
+POLY_SCALE = 0.02        # 把 w 归一到 O(1)，改善最小二乘条件数
 
 
-def _poly_powers(deg):
-    """返回 [(x 的幂, y 的幂)]，总次数从 0 到 deg。"""
-    return [(d - i, i) for d in range(deg + 1) for i in range(d + 1)]
+def curve_terms(w):
+    """一维五次多项式基，w 单位 m，内部按 POLY_SCALE 归一化。"""
+    s = np.asarray(w, float) / POLY_SCALE
+    return np.stack([s ** k for k in range(POLY_DEG + 1)], axis=-1)
 
 
-def poly_terms(x, y):
-    """五次多项式基（21 项），x/y 单位 m，内部按 POLY_SCALE 归一化。"""
-    x, y = x / POLY_SCALE, y / POLY_SCALE
-    return np.stack([x ** j * y ** i for j, i in _poly_powers(POLY_DEG)],
-                    axis=-1)
+def curve_jac(w):
+    """d(terms)/dw（对物理坐标，已除 POLY_SCALE）。"""
+    s = np.asarray(w, float) / POLY_SCALE
+    zero = np.zeros_like(s)
+    return np.stack([k * s ** (k - 1) if k else zero
+                     for k in range(POLY_DEG + 1)], axis=-1) / POLY_SCALE
 
 
-def poly_jac(x, y):
-    """d(terms)/dx, d(terms)/dy（对物理坐标，已除 POLY_SCALE）。"""
-    x, y = x / POLY_SCALE, y / POLY_SCALE
-    zero = np.zeros_like(x)
-    dx = [j * x ** (j - 1) * y ** i if j else zero
-          for j, i in _poly_powers(POLY_DEG)]
-    dy = [i * x ** j * y ** (i - 1) if i else zero
-          for j, i in _poly_powers(POLY_DEG)]
-    return np.stack(dx, axis=-1) / POLY_SCALE, np.stack(dy, axis=-1) / POLY_SCALE
+class WristCurve:
+    """沿差动行程 w = L2 - L3 的一维旋转矢量拟合。"""
 
-
-class WristPoly:
-    def __init__(self, l2, l3, rvec):
-        self.l2 = np.asarray(l2, float)
-        self.l3 = np.asarray(l3, float)
-        x = np.broadcast_to(self.l2[:, None], rvec.shape[:2]).ravel()
-        y = np.broadcast_to(self.l3[None, :], rvec.shape[:2]).ravel()
-        A = poly_terms(x, y)
-        self.coef, *_ = np.linalg.lstsq(A, rvec.reshape(-1, 3), rcond=None)
-        err = (A @ self.coef).reshape(rvec.shape) - rvec
-        en = np.linalg.norm(err, axis=-1)          # 每个网格点的角度误差模长
+    def __init__(self, w, rvec):
+        self.w = np.asarray(w, float)
+        A = curve_terms(self.w)
+        self.coef, *_ = np.linalg.lstsq(A, rvec, rcond=None)
+        err = A @ self.coef - rvec
+        en = np.linalg.norm(err, axis=-1)          # 每个采样点的角度误差模长
         self.rms = float(np.sqrt(np.mean(en ** 2)))
         self.max = float(en.max())
-        self.rvec = rvec
         print(f"  五次多项式拟合: RMS {self.rms:.3e} rad，"
               f"最大 {self.max:.3e} rad （{np.degrees(self.max):.3f} deg）")
 
-    def forward(self, l2, l3):
-        x = np.atleast_1d(np.asarray(l2, float))
-        y = np.atleast_1d(np.asarray(l3, float))
-        r = poly_terms(x, y) @ self.coef
-        return r
+    def forward(self, w):
+        w = np.atleast_1d(np.asarray(w, float))
+        return curve_terms(w) @ self.coef
 
-    def jacobian(self, l2, l3):
-        x = np.atleast_1d(np.asarray(l2, float))
-        y = np.atleast_1d(np.asarray(l3, float))
-        dx, dy = poly_jac(x, y)
-        return dx @ self.coef, dy @ self.coef      # each 1 x 3
+    def jacobian(self, w):
+        w = np.atleast_1d(np.asarray(w, float))
+        return curve_jac(w) @ self.coef        # n x 3
 
-    def inverse(self, r_target, guess, iters=30, tol=1e-10):
-        """2 维 Newton：解 r(L2,L3)=r_target，返回 (l2,l3,err)。"""
-        x = np.array(guess, float)
+    def inverse(self, r_target, guess, iters=50, tol=1e-10):
+        """1 维 Newton：解 r(w)=r_target，返回 (w, err)。"""
+        w = float(guess)
         for _ in range(iters):
-            r = self.forward(x[0], x[1])[0]
+            r = self.forward(w)[0]
             e = r_target - r
             if np.linalg.norm(e) < tol:
-                return x[0], x[1], np.linalg.norm(e)
-            Jx, Jy = self.jacobian(x[0], x[1])
-            J = np.column_stack([Jx[0], Jy[0]])   # 3 x 2
-            d = np.linalg.solve(J.T @ J + 1e-12 * np.eye(2), J.T @ e)
-            d = np.clip(d, -0.005, 0.005)
-            x = x + d
-        r = self.forward(x[0], x[1])[0]
-        return x[0], x[1], float(np.linalg.norm(r_target - r))
+                return w, float(np.linalg.norm(e))
+            j = self.jacobian(w)[0]
+            dw = float(j @ e / (j @ j + 1e-15))
+            w += np.clip(dw, -0.002, 0.002)
+        r = self.forward(w)[0]
+        return w, float(np.linalg.norm(r_target - r))
 
 
 # ---------------------------------------------------------------- 主流程
 def main():
     ap = argparse.ArgumentParser(description="电缸 <-> 任务角标定")
-    ap.add_argument("--step-mm", type=float, default=2.5, help="腕部网格步长 (mm)")
-    ap.add_argument("--half-mm", type=float, default=30.0, help="腕部网格半宽 (mm)")
+    ap.add_argument("--step-mm", type=float, default=1.0, help="腕部差动步长 (mm)")
+    ap.add_argument("--half-w-mm", type=float, default=40.0,
+                    help="差动行程 w=L2-L3 的半宽 (mm)")
     ap.add_argument("--l1-step-mm", type=float, default=0.5, help="肘部步长 (mm)")
     ap.add_argument("--plot", action="store_true", help="生成标定曲线")
     ap.add_argument("--plot-only", action="store_true", help="只从 JSON 画图")
@@ -323,8 +307,8 @@ def main():
           f"{np.linalg.norm(kin.loop_rows(q0)[1]) * 1000:.2e} mm")
 
     elbow = sample_elbow(kin, q0, args.l1_step_mm)
-    vals, rvec, res = sample_wrist(kin, q0, args.half_mm, args.step_mm)
-    wrist = WristPoly(vals, vals, rvec)
+    vals, rvec, res = sample_wrist(kin, q0, args.half_w_mm, args.step_mm)
+    wrist = WristCurve(vals, rvec)
 
     print("\n=== 3. 拟合与回代 ===")
     # 肘：直接线性插值，正反各查一次（θ4 随 L1 递减，插值前按 θ4 排序）
@@ -340,19 +324,17 @@ def main():
     tag(wrist.max < 5e-3, "腕部五次多项式拟合 < 5 mrad",
         f"最大 {wrist.max:.2e} rad")
 
-    # 腕：用邻近网格点做初值，逆解回代
+    # 腕：用邻近采样点做初值，逆解回代
     errs = []
     for i in range(0, len(vals), 3):
-        for j in range(0, len(vals), 3):
-            target = rvec[i, j]
-            if np.any(np.isnan(target)):
-                continue
-            g2 = vals[i] + (0.5e-3 if i + 1 < len(vals) else -0.5e-3)
-            g3 = vals[j] + (0.5e-3 if j + 1 < len(vals) else -0.5e-3)
-            l2, l3, err = wrist.inverse(target, (g2, g3))
-            errs.append([np.hypot(l2 - vals[i], l3 - vals[j]), err])
+        target = rvec[i]
+        if np.any(np.isnan(target)):
+            continue
+        guess = vals[i] + (0.5e-3 if i + 1 < len(vals) else -0.5e-3)
+        w_back, err = wrist.inverse(target, guess)
+        errs.append([abs(w_back - vals[i]), err])
     errs = np.array(errs)
-    print(f"  腕部逆解：横向误差最大 {errs[:,0].max()*1000:.3f} mm，"
+    print(f"  腕部逆解：差动行程误差最大 {errs[:,0].max()*1000:.3f} mm，"
           f"残差最大 {errs[:,1].max():.2e} rad")
     tag(errs[:, 0].max() < 1e-3, "腕部逆解回代 < 1 mm",
         f"最大 {errs[:,0].max()*1000:.3f} mm")
@@ -362,11 +344,12 @@ def main():
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "model": os.path.relpath(MJCF, os.path.dirname(HERE)).replace("\\", "/"),
         "method": "constraint-nullspace continuation + Newton projection",
-        "units": {"l1": "m", "l2": "m", "l3": "m",
+        "units": {"l1": "m", "w": "m",
                   "theta4": "rad", "rotvec": "rad"},
         "conventions": {
             "elbow": "theta4 = atan2(R_B3^T R_B6 [0,2], [2,2])，绕 Y 的俯仰",
-            "wrist": "r = log(R_B6^T R_B12)，旋转矢量，q=0 时 r=0",
+            "wrist": "w = L2 - L3，L2=+w/2，L3=-w/2（锁和）；"
+                     "r = log(R_B6^T R_B12)，旋转矢量，q=0 时 r=0",
         },
         "elbow": {
             "l1": elbow[:, 0].tolist(),
@@ -374,8 +357,7 @@ def main():
             "residual_mm": elbow[:, 2].tolist(),
         },
         "wrist": {
-            "l2": vals.tolist(),
-            "l3": vals.tolist(),
+            "w": vals.tolist(),
             "rotvec": rvec.tolist(),
             "residual_mm": res.tolist(),
             "poly_degree": POLY_DEG,
@@ -386,8 +368,10 @@ def main():
         },
         "limits": {
             "l1_mm": [float(elbow[0, 0] * 1000), float(elbow[-1, 0] * 1000)],
-            "l2_l3_mm": [-args.half_mm, args.half_mm],
-            "note": "L1 两端由四连杆死点决定，不是 ±100 mm 占位行程",
+            "wrist_w_mm": [-args.half_w_mm, args.half_w_mm],
+            "wrist_sum_mm": [-1.0, 1.0],
+            "note": "L1 两端由四连杆死点决定；腕部锁和 L2+L3=0（软约束 ±1 mm），"
+                    "w=L2-L3 为差动行程",
         },
         "verification": {
             "elbow_roundtrip_max_rad": max_el,
@@ -395,7 +379,7 @@ def main():
             "wrist_inverse_residual_max_rad": float(errs[:, 1].max()),
         },
     }
-    with open(json_path, "w", encoding="utf-8") as fp:
+    with open(json_path, "w", encoding="utf-8", newline="\n") as fp:
         json.dump(doc, fp, ensure_ascii=False, indent=1)
     print(f"  INFO  标定表 -> {json_path}")
 
@@ -436,17 +420,19 @@ def plot_all(doc, enabled):
     fig.savefig(os.path.join(OUT_DIR, "elbow.png"), dpi=130)
     plt.close(fig)
 
-    w = doc["wrist"]
-    l2 = np.array(w["l2"]) * 1000.0
-    l3 = np.array(w["l3"]) * 1000.0
-    rv = np.array(w["rotvec"])
-    fig, axes = plt.subplots(1, 3, figsize=(14, 4))
+    wd = doc["wrist"]
+    wv = np.array(wd["w"])
+    w = wv * 1000.0
+    rv = np.array(wd["rotvec"])
+    fit = curve_terms(wv) @ np.array(wd["poly_coef"])
+    fig, axes = plt.subplots(1, 3, figsize=(14, 4), sharex=True)
     for k, ax in enumerate(axes):
-        im = ax.pcolormesh(l3, l2, rv[:, :, k], shading="auto", cmap="coolwarm")
-        ax.set_xlabel("L3 (mm)")
-        ax.set_ylabel("L2 (mm)")
-        ax.set_title(f"rotvec[{k}] (rad)")
-        fig.colorbar(im, ax=ax)
+        ax.plot(w, rv[:, k], "o", ms=2.5, label="table")
+        ax.plot(w, fit[:, k], "-", lw=1, label="poly")
+        ax.set_xlabel("w = L2 - L3 (mm)")
+        ax.set_ylabel(f"rotvec[{k}] (rad)")
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=7)
     fig.tight_layout()
     fig.savefig(os.path.join(OUT_DIR, "wrist.png"), dpi=130)
     plt.close(fig)

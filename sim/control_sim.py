@@ -95,6 +95,13 @@ class ArmSim:
         self.slide = np.array(
             [m.jnt_type[i] == mujoco.mjtJoint.mjJNT_SLIDE for i in self.jnt])
         self.rate = np.where(self.slide, RATE_SLIDE, RATE_REV) * m.opt.timestep
+        # 5 维虚拟输入 u=[R1,R2,R3,L1,w]，w=L2-L3 是腕部差动行程；
+        # L2=+w/2、L3=-w/2，锁死 L2+L3=0。P 把 u 的增量映射回 6 个执行器。
+        self.P = np.zeros((6, 5))
+        self.P[np.arange(4), np.arange(4)] = 1.0
+        self.P[4, 4], self.P[5, 4] = 0.5, -0.5
+        self.u_rate = np.array([RATE_REV, RATE_REV, RATE_REV,
+                                RATE_SLIDE, 2.0 * RATE_SLIDE]) * m.opt.timestep
 
         lo = np.array([m.actuator_ctrlrange[a, 0] for a in self.act])
         hi = np.array([m.actuator_ctrlrange[a, 1] for a in self.act])
@@ -169,15 +176,23 @@ class ArmSim:
                                            np.linalg.norm(p_dot) < 1e-6):
             return q_ref.copy()
         lam = 0.01                                  # 阻尼 (m)
-        dq = self.m.opt.timestep * (Jred.T @ np.linalg.solve(
-            Jred @ Jred.T + (lam * lam) * np.eye(3), cmd))
-        dq = np.clip(dq, -self.rate, self.rate)
+        Jv = Jred @ self.P                          # 3 x 5，对虚拟输入
+        du = self.m.opt.timestep * (Jv.T @ np.linalg.solve(
+            Jv @ Jv.T + (lam * lam) * np.eye(3), cmd))
+        du = np.clip(du, -self.u_rate, self.u_rate)
+        dq = self.P @ du
 
         # 抗饱和：目标不能跑到实际位置太前面，否则执行器顶住时误差只会越积越大
         leash = np.where(self.slide, 0.005, 0.05)
         q_act = self.q_act()
         q_new = np.clip(q_ref + dq, q_act - leash, q_act + leash)
-        return np.clip(q_new, self.ctrl_lo, self.ctrl_hi)
+        q_new = np.clip(q_new, self.ctrl_lo, self.ctrl_hi)
+
+        # 限幅可能破坏对称性；把共模（L2+L3）压回 0，保留差动行程 w
+        c = 0.5 * (q_new[4] + q_new[5])
+        q_new[4] -= c
+        q_new[5] -= c
+        return q_new
 
     def step(self):
         self.gravity_ff()
@@ -188,8 +203,11 @@ class ArmSim:
         res = loop_residual_mm(self.m, self.d, self.loops)
         p_act = d.xpos[self.body].copy()
         q_now = d.qpos[self.qadr]
-        lim = int(np.any(q_now <= self.jnt_rng[:, 0] + 1e-9) or
-                  np.any(q_now >= self.jnt_rng[:, 1] - 1e-9))
+        # 不能把“贴住限位”算成触发（R2 零位就是下限 0），也不能把约束求解的
+        # 微小柔性算成越界：旋转允许 1e-4 rad，移动允许 1e-5 m。
+        tol = np.where(self.slide, 1e-5, 1e-4)
+        lim = int(np.any(q_now < self.jnt_rng[:, 0] - tol) or
+                  np.any(q_now > self.jnt_rng[:, 1] + tol))
         p = np.zeros(3) if p_ref is None else p_ref
         self.rows.append(np.concatenate([
             [t], self.q_act(), q_ref, q_des, p_act, p,
@@ -258,7 +276,16 @@ def summarize(sim, rows, mode, t_run):
                   f"{n}={sat[i]*100:.1f}%" for i, n in enumerate(JOINTS)))
 
     nlim = int(rows[:, -1].sum())
-    ok &= tag(nlim == 0, "未触发关节限位", f"{nlim} 步")
+    ok &= tag(nlim == 0, "未越出关节限位", f"{nlim} 步")
+
+    # 单向行程与腕部锁和
+    ok &= tag(bool(np.min(q[:, 1]) >= -1e-4), "R2 单向（>=0）",
+              f"最小 {np.min(q[:, 1]):.2e} rad")
+    ok &= tag(bool(np.max(q[:, 3]) <= 1e-5), "L1 单向（<=0）",
+              f"最大 {np.max(q[:, 3]):.2e} m")
+    s = q[:, 4] + q[:, 5]
+    ok &= tag(bool(np.abs(s).max() < 1e-3), "腕部差动锁和 |L2+L3|<=1 mm",
+              f"最大 {np.abs(s).max()*1000:.3f} mm")
     return ok
 
 
@@ -284,8 +311,15 @@ def make_target(mode, t, q_start):
 
     if mode == "sine":
         f0 = 0.25
-        amp = np.array([0.20, 0.12, 0.12, 0.004, 0.004, 0.004])
-        qd = q_start + amp * np.sin(2 * np.pi * f0 * t)
+        s = np.sin(2 * np.pi * f0 * t)
+        one = 0.5 * (1.0 - np.cos(2 * np.pi * f0 * t))   # 0..1 单边
+        qd[0] += 0.20 * s
+        qd[1] += 0.12 * one          # R2 只走正半轴
+        qd[2] += 0.12 * s
+        qd[3] -= 0.004 * one         # L1 只走负半轴
+        w = 0.008 * s                # 腕部差动行程
+        qd[4] += 0.5 * w
+        qd[5] -= 0.5 * w
         return qd, None
 
     raise ValueError(mode)
@@ -346,6 +380,9 @@ def run_mode(mode, duration, viewer=False, csv_path=None, plot=False):
                 trim += ki * (q_des - sim.q_act()) * dt
                 trim = np.clip(trim, -trim_lim, trim_lim)
             q_cmd = np.clip(q_ref + trim, sim.ctrl_lo, sim.ctrl_hi)
+            c = 0.5 * (q_cmd[4] + q_cmd[5])      # 锁和：L2/L3 只保留差动
+            q_cmd[4] -= c
+            q_cmd[5] -= c
 
         sim.set_ctrl(q_cmd)
         sim.step()

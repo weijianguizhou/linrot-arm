@@ -1,6 +1,10 @@
 <!-- 直线模组手臂 MuJoCo 模型。
      13 物理刚体 B0..B12；12 个物理树关节 + 3 个闭环 R6/R10/R12。
      腕部两根电缸的杆端鱼眼：每侧 1 个滑副体 + 3 个铰（Y-X-Z），共 8 个虚拟体、6 个鱼眼铰。
+     6 个执行器：肩部 R1/R2/R3（旋转）+ 肘 L1、腕 L2/L3（直线电缸）；
+     R4/R5/R7/R8/R9/R11 是四连杆/并联腕的被动关节，由闭环约束带动。
+     闭环 + 鱼眼近零惯量需要 implicitfast 积分器；鱼眼铰加微小刚度/阻尼
+     只是为了压住冗余自转（球铰绕杆轴的自由度），不影响任务运动。
      数值宏集中在 model/templates/linear_arm.mjcf.tpl 顶部。 -->
 
 <!--@ COLOR_BODY = 0.7 0.7 0.72 1 -->
@@ -10,10 +14,30 @@
 <!--@ REV_UPPER = 2.9 -->
 <!--@ SLIDE_LOWER = -0.1 -->
 <!--@ SLIDE_UPPER = 0.1 -->
+<!-- R2 只允许正转（0 位为竖直伸展）；L1 只能回缩，下限取标定实测的死点 −57 mm -->
+<!--@ LIMIT_SOLREF = 0.002 -->
+<!--@ R2_LOWER = 0.0 -->
+<!--@ R2_UPPER = 2.9 -->
+<!--@ L1_LOWER = -0.057 -->
+<!--@ L1_UPPER = 0.0 -->
 <!--@ GIMBAL_LIMIT = 0.5 -->
 <!--@ GIMBAL_ARMATURE = 1e-6 -->
+<!--@ GIMBAL_STIFFNESS = 0.1 -->
+<!--@ GIMBAL_DAMPING = 0.01 -->
 <!--@ GIMBAL_DUMMY_MASS = 1e-6 -->
 <!--@ GIMBAL_DUMMY_INERTIA = 1e-9 -->
+<!-- 闭环等式约束的时间常数 (s)。默认 0.02 在重力负载下会松到 1.5 mm；
+     1 ms 步长下取 0.002 可压到 0.05 mm，且 2.5 倍步长以内仍稳定。 -->
+<!--@ EQ_SOLREF_TC = 0.002 -->
+
+<!-- 执行器增益为占位值（等电机手册确认后替换）。位置伺服 + 速度阻尼，
+     forcerange 与 URDF 里的 effort 占位值保持一致：旋转 60 N·m / 直线 200 N。 -->
+<!--@ ACT_REV_KP = 800 -->
+<!--@ ACT_REV_KV = 20 -->
+<!--@ ACT_REV_FORCE = 60 -->
+<!--@ ACT_SLIDE_KP = 20000 -->
+<!--@ ACT_SLIDE_KV = 200 -->
+<!--@ ACT_SLIDE_FORCE = 200 -->
 
 <!--@ B0_MASS = 0.640000 -->
 <!--@ B0_COM = 0.00199376 0.0149344 -9.28886e-05 -->
@@ -163,7 +187,7 @@
 
 <mujoco model="linear_arm">
   <compiler angle="radian" meshdir="../meshes" autolimits="true"/>
-  <option gravity="0 0 -9.81"/>
+  <option timestep="0.001" integrator="implicitfast" gravity="0 0 -9.81"/>
   <visual>
     <global offwidth="1400" offheight="1400"/>
     <headlight ambient="0.35 0.35 0.35" diffuse="0.6 0.6 0.6" specular="0.1 0.1 0.1"/>
@@ -182,7 +206,8 @@
       <joint type="slide" range="${SLIDE_LOWER} ${SLIDE_UPPER}"/>
     </default>
     <default class="gimbal">
-      <joint type="hinge" range="-${GIMBAL_LIMIT} ${GIMBAL_LIMIT}" damping="0" armature="${GIMBAL_ARMATURE}"/>
+      <joint type="hinge" range="-${GIMBAL_LIMIT} ${GIMBAL_LIMIT}" damping="${GIMBAL_DAMPING}"
+             stiffness="${GIMBAL_STIFFNESS}" armature="${GIMBAL_ARMATURE}"/>
     </default>
   </default>
 
@@ -217,7 +242,8 @@
 
         <!-- B2：3 个零件 -->
         <body name="B2" pos="${R2_ORIGIN}">
-          <joint name="R2" class="rev" axis="${R2_AXIS}"/>
+          <joint name="R2" class="rev" axis="${R2_AXIS}" range="${R2_LOWER} ${R2_UPPER}"
+                 solreflimit="${LIMIT_SOLREF} 1"/>
           <inertial pos="${B2_COM}" mass="${B2_MASS}" fullinertia="${B2_IXX} ${B2_IYY} ${B2_IZZ} ${B2_IXY} ${B2_IXZ} ${B2_IYZ}"/>
           <geom name="B2_geom" mesh="B2_mesh"/>
 
@@ -235,7 +261,8 @@
 
               <!-- B5：5 个零件 -->
               <body name="B5" pos="${L1_ORIGIN}">
-                <joint name="L1" class="slide" axis="${L1_AXIS}"/>
+                <joint name="L1" class="slide" axis="${L1_AXIS}" range="${L1_LOWER} ${L1_UPPER}"
+                       solreflimit="${LIMIT_SOLREF} 1"/>
                 <inertial pos="${B5_COM}" mass="${B5_MASS}" fullinertia="${B5_IXX} ${B5_IYY} ${B5_IZZ} ${B5_IXY} ${B5_IXZ} ${B5_IYZ}"/>
                 <geom name="B5_geom" mesh="B5_mesh"/>
 
@@ -334,13 +361,36 @@
     </body>
   </worldbody>
 
+  <!-- 6 个位置执行器：ctrl 为关节目标（旋转 rad / 直线 m），
+       kv 提供速度阻尼；被动关节不配执行器，靠闭环约束随动。 -->
+  <actuator>
+    <position name="act_R1" joint="R1" kp="${ACT_REV_KP}" kv="${ACT_REV_KV}"
+              ctrlrange="${REV_LOWER} ${REV_UPPER}"
+              forcerange="-${ACT_REV_FORCE} ${ACT_REV_FORCE}"/>
+    <position name="act_R2" joint="R2" kp="${ACT_REV_KP}" kv="${ACT_REV_KV}"
+              ctrlrange="${R2_LOWER} ${R2_UPPER}"
+              forcerange="-${ACT_REV_FORCE} ${ACT_REV_FORCE}"/>
+    <position name="act_R3" joint="R3" kp="${ACT_REV_KP}" kv="${ACT_REV_KV}"
+              ctrlrange="${REV_LOWER} ${REV_UPPER}"
+              forcerange="-${ACT_REV_FORCE} ${ACT_REV_FORCE}"/>
+    <position name="act_L1" joint="L1" kp="${ACT_SLIDE_KP}" kv="${ACT_SLIDE_KV}"
+              ctrlrange="${L1_LOWER} ${L1_UPPER}"
+              forcerange="-${ACT_SLIDE_FORCE} ${ACT_SLIDE_FORCE}"/>
+    <position name="act_L2" joint="L2" kp="${ACT_SLIDE_KP}" kv="${ACT_SLIDE_KV}"
+              ctrlrange="${SLIDE_LOWER} ${SLIDE_UPPER}"
+              forcerange="-${ACT_SLIDE_FORCE} ${ACT_SLIDE_FORCE}"/>
+    <position name="act_L3" joint="L3" kp="${ACT_SLIDE_KP}" kv="${ACT_SLIDE_KV}"
+              ctrlrange="${SLIDE_LOWER} ${SLIDE_UPPER}"
+              forcerange="-${ACT_SLIDE_FORCE} ${ACT_SLIDE_FORCE}"/>
+  </actuator>
+
   <!-- 闭环：URDF 树中切断的 R6 / R10 / R12，anchor 为 body1 局部坐标 (m)。 -->
   <equality>
     <!-- R6: B3 -> B6 -->
-    <connect name="loop_R6" body1="B3" body2="B6" anchor="${LOOP_R6_ANCHOR}"/>
+    <connect name="loop_R6" body1="B3" body2="B6" anchor="${LOOP_R6_ANCHOR}" solref="${EQ_SOLREF_TC} 1"/>
     <!-- R10: B7 -> B12 -->
-    <connect name="loop_R10" body1="B7" body2="B12" anchor="${LOOP_R10_ANCHOR}"/>
+    <connect name="loop_R10" body1="B7" body2="B12" anchor="${LOOP_R10_ANCHOR}" solref="${EQ_SOLREF_TC} 1"/>
     <!-- R12: B11 -> B12 -->
-    <connect name="loop_R12" body1="B11" body2="B12" anchor="${LOOP_R12_ANCHOR}"/>
+    <connect name="loop_R12" body1="B11" body2="B12" anchor="${LOOP_R12_ANCHOR}" solref="${EQ_SOLREF_TC} 1"/>
   </equality>
 </mujoco>

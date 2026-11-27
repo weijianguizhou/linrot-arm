@@ -10,6 +10,9 @@ MUJOCO_LOG.TXT
 mjls_*
 *.mjb
 
+# 仿真运行产物（CSV / PNG 可随时重生成）
+sim/logs/
+
 # 编辑器与系统
 .vscode/
 .idea/
@@ -21,3 +24,6 @@ desktop.ini
 *.tmp
 *.bak
 ~$*
+
+# 嵌套的第三方仓库（电控运行时），不要随主仓库提交
+电控代码库/

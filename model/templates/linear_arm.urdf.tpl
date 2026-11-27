@@ -11,6 +11,11 @@
 <!--@ REV_VELOCITY = 3.0 -->
 <!--@ SLIDE_LOWER = -0.1 -->
 <!--@ SLIDE_UPPER = 0.1 -->
+<!-- R2 只允许正转（0 位为竖直伸展）；L1 只能回缩，下限取标定实测的死点 −57 mm -->
+<!--@ R2_LOWER = 0.0 -->
+<!--@ R2_UPPER = 2.9 -->
+<!--@ L1_LOWER = -0.057 -->
+<!--@ L1_UPPER = 0.0 -->
 <!--@ SLIDE_EFFORT = 200 -->
 <!--@ SLIDE_VELOCITY = 0.5 -->
 
@@ -389,7 +394,7 @@
     <child link="B2"/>
     <origin xyz="${R2_ORIGIN}"/>
     <axis xyz="${R2_AXIS}"/>
-    <limit lower="${REV_LOWER}" upper="${REV_UPPER}" effort="${REV_EFFORT}" velocity="${REV_VELOCITY}"/>
+    <limit lower="${R2_LOWER}" upper="${R2_UPPER}" effort="${REV_EFFORT}" velocity="${REV_VELOCITY}"/>
   </joint>
 
   <!-- R3: EC-A3814 轴线（肩3） -->
@@ -416,7 +421,7 @@
     <child link="B5"/>
     <origin xyz="${L1_ORIGIN}"/>
     <axis xyz="${L1_AXIS}"/>
-    <limit lower="${SLIDE_LOWER}" upper="${SLIDE_UPPER}" effort="${SLIDE_EFFORT}" velocity="${SLIDE_VELOCITY}"/>
+    <limit lower="${L1_LOWER}" upper="${L1_UPPER}" effort="${SLIDE_EFFORT}" velocity="${SLIDE_VELOCITY}"/>
   </joint>
 
   <!-- R5: SolidWorks 同心552/554 (大臂电缸下支点) -->
