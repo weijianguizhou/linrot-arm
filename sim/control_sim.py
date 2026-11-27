@@ -77,7 +77,7 @@ def loop_residual_mm(m, d, loops):
 
 class ArmSim:
     def __init__(self):
-        self.m = mujoco.MjModel.from_xml_path(MJCF)
+        self.m = mujoco.MjModel.from_xml_path(os.path.relpath(MJCF))
         self.d = mujoco.MjData(self.m)
         self.loops = json.load(open(LOOPS, encoding="utf-8"))
 

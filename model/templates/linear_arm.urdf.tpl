@@ -11,11 +11,14 @@
 <!--@ REV_VELOCITY = 3.0 -->
 <!--@ SLIDE_LOWER = -0.1 -->
 <!--@ SLIDE_UPPER = 0.1 -->
-<!-- R2 只允许正转（0 位为竖直伸展）；L1 只能回缩，下限取标定实测的死点 −57 mm -->
+<!-- R2 只允许正转（0 位为竖直伸展）；L1 只能回缩（几何死点 −56.33 mm，留裕度取 −55 mm）；
+     被动铰 R5 限制在死点 2.423 rad 以内，防止回缩冲过死点翻折自锁 -->
 <!--@ R2_LOWER = 0.0 -->
 <!--@ R2_UPPER = 2.9 -->
-<!--@ L1_LOWER = -0.057 -->
+<!--@ L1_LOWER = -0.055 -->
 <!--@ L1_UPPER = 0.0 -->
+<!--@ R5_LOWER = -0.1 -->
+<!--@ R5_UPPER = 2.2 -->
 <!--@ SLIDE_EFFORT = 200 -->
 <!--@ SLIDE_VELOCITY = 0.5 -->
 
@@ -430,7 +433,7 @@
     <child link="B6"/>
     <origin xyz="${R5_ORIGIN}"/>
     <axis xyz="${R5_AXIS}"/>
-    <limit lower="${REV_LOWER}" upper="${REV_UPPER}" effort="${REV_EFFORT}" velocity="${REV_VELOCITY}"/>
+    <limit lower="${R5_LOWER}" upper="${R5_UPPER}" effort="${REV_EFFORT}" velocity="${REV_VELOCITY}"/>
   </joint>
 
   <!-- R7: SolidWorks 同心34/417 (腕部十字轴第1轴) -->

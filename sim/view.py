@@ -42,7 +42,7 @@ def _mesh_zmin(m, d):
 
 def _with_classic_background(path, m, d):
     """给模型套上 MuJoCo 官方例程同款的天空盒和棋盘地面。"""
-    spec = mujoco.MjSpec.from_file(path)
+    spec = mujoco.MjSpec.from_file(os.path.relpath(path))
     spec.add_texture(
         name="skybox", type=mujoco.mjtTexture.mjTEXTURE_SKYBOX,
         builtin=mujoco.mjtBuiltin.mjBUILTIN_GRADIENT,
@@ -91,7 +91,7 @@ def main():
     if not os.path.exists(path):
         sys.exit(f"找不到模型: {path}")
 
-    m = mujoco.MjModel.from_xml_path(path)
+    m = mujoco.MjModel.from_xml_path(os.path.relpath(path))
     if not args.gravity:
         m.opt.gravity[:] = 0.0
     d = mujoco.MjData(m)

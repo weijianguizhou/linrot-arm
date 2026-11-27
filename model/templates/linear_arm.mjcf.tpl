@@ -14,12 +14,15 @@
 <!--@ REV_UPPER = 2.9 -->
 <!--@ SLIDE_LOWER = -0.1 -->
 <!--@ SLIDE_UPPER = 0.1 -->
-<!-- R2 只允许正转（0 位为竖直伸展）；L1 只能回缩，下限取标定实测的死点 −57 mm -->
+<!-- R2 只允许正转（0 位为竖直伸展）；L1 只能回缩（几何死点 −56.33 mm，留裕度取 −55 mm）；
+     被动铰 R5 限制在死点 2.423 rad 以内，防止回缩冲过死点翻折自锁 -->
 <!--@ LIMIT_SOLREF = 0.002 -->
 <!--@ R2_LOWER = 0.0 -->
 <!--@ R2_UPPER = 2.9 -->
-<!--@ L1_LOWER = -0.057 -->
+<!--@ L1_LOWER = -0.055 -->
 <!--@ L1_UPPER = 0.0 -->
+<!--@ R5_LOWER = -0.1 -->
+<!--@ R5_UPPER = 2.2 -->
 <!--@ GIMBAL_LIMIT = 0.5 -->
 <!--@ GIMBAL_ARMATURE = 1e-6 -->
 <!--@ GIMBAL_STIFFNESS = 0.1 -->
@@ -268,7 +271,8 @@
 
                 <!-- B6：4 个零件 -->
                 <body name="B6" pos="${R5_ORIGIN}">
-                  <joint name="R5" class="rev" axis="${R5_AXIS}"/>
+                  <joint name="R5" class="rev" axis="${R5_AXIS}" range="${R5_LOWER} ${R5_UPPER}"
+                         solreflimit="${LIMIT_SOLREF} 1"/>
                   <inertial pos="${B6_COM}" mass="${B6_MASS}" fullinertia="${B6_IXX} ${B6_IYY} ${B6_IZZ} ${B6_IXY} ${B6_IXZ} ${B6_IYZ}"/>
                   <geom name="B6_geom" mesh="B6_mesh"/>
 

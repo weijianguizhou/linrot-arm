@@ -65,7 +65,7 @@ def main():
     mp = json.load(open(os.path.join(V2, "mapping.json"), encoding="utf-8"))
 
     print(f"MuJoCo {mujoco.__version__}")
-    m = mujoco.MjModel.from_xml_path(MJCF)
+    m = mujoco.MjModel.from_xml_path(os.path.relpath(MJCF))
     d = mujoco.MjData(m)
     mujoco.mj_forward(m, d)
 
@@ -173,7 +173,7 @@ def main():
     # ---------------------------------------------------------------- 7
     print("\n=== 7. 闭环动态保持测试（去重力 + 扰动静止收敛） ===")
     d2 = mujoco.MjData(m)
-    m2 = mujoco.MjModel.from_xml_path(MJCF)
+    m2 = mujoco.MjModel.from_xml_path(os.path.relpath(MJCF))
     m2.opt.gravity[:] = 0.0
     m2.opt.integrator = mujoco.mjtIntegrator.mjINT_IMPLICIT
     # 用模型自己的步长（1 ms）。等式约束 solref=0.002，2 ms 步长会越过稳定边界。
@@ -191,6 +191,28 @@ def main():
     print(f"  扰动后 初始残差 = {np.round(r0, 2)} mm")
     print(f"  3e3 步后 残差 = {np.round(r1, 3)} mm")
     tag(r1.max() < 0.5, "闭环约束能把机构拉回闭合", f"收敛后最大 {r1.max():.3f} mm")
+
+    # 肘部 L1 全行程回缩 -> 伸出往返测试（验证不会越过四连杆死点自锁）
+    d3 = mujoco.MjData(m2)
+    mujoco.mj_forward(m2, d3)
+    aid_l1 = mujoco.mj_name2id(m2, mujoco.mjtObj.mjOBJ_ACTUATOR, "act_L1")
+    jid_l1 = mujoco.mj_name2id(m2, mujoco.mjtObj.mjOBJ_JOINT, "L1")
+    jid_r5 = mujoco.mj_name2id(m2, mujoco.mjtObj.mjOBJ_JOINT, "R5")
+    l1_lo, l1_hi = m2.actuator_ctrlrange[aid_l1]
+    d3.ctrl[aid_l1] = l1_lo
+    for _ in range(1500):
+        mujoco.mj_step(m2, d3)
+    l1_ret = float(d3.qpos[m2.jnt_qposadr[jid_l1]])
+    r5_ret = float(d3.qpos[m2.jnt_qposadr[jid_r5]])
+    d3.ctrl[aid_l1] = l1_hi
+    for _ in range(1500):
+        mujoco.mj_step(m2, d3)
+    l1_ext = float(d3.qpos[m2.jnt_qposadr[jid_l1]])
+    r5_ext = float(d3.qpos[m2.jnt_qposadr[jid_r5]])
+    tag(abs(l1_ret - l1_lo) < 1e-3 and abs(l1_ext - l1_hi) < 1e-4,
+        "act_L1 全行程回缩后可正常伸出",
+        f"回缩 L1={l1_ret*1000:.2f} mm (R5={r5_ret:.2f} rad) -> "
+        f"伸出 L1={l1_ext*1000:.2f} mm (R5={r5_ext:.3f} rad)")
 
     # ---------------------------------------------------------------- 8
     print("\n=== 8. 碰撞设置 ===")

@@ -24,11 +24,11 @@ def check(name, cond, detail=""):
 
 def main():
     print("=== 1. 加载 ===")
-    m = mujoco.MjModel.from_xml_path(URDF)
+    m = mujoco.MjModel.from_xml_path(os.path.relpath(URDF))
     d = mujoco.MjData(m)
     mujoco.mj_forward(m, d)
     check("URDF 能被 MuJoCo 加载", True, f"nbody={m.nbody} njnt={m.njnt}")
-    mm = mujoco.MjModel.from_xml_path(MJCF)
+    mm = mujoco.MjModel.from_xml_path(os.path.relpath(MJCF))
     check("MJCF 能被 MuJoCo 加载", True, f"nbody={mm.nbody} njnt={mm.njnt} neq={mm.neq}")
 
     print("\n=== 2. 单位 / 尺度 ===")

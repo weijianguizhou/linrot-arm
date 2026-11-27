@@ -5,7 +5,8 @@
      闭环关节不在 URDF 树中，位置见 loops.yaml 与 MJCF 的 equality。
      数值宏集中在 model/templates/linear_arm.urdf.tpl 顶部。 -->
 
-<!-- R2 只允许正转（0 位为竖直伸展）；L1 只能回缩，下限取标定实测的死点 −57 mm -->
+<!-- R2 只允许正转（0 位为竖直伸展）；L1 只能回缩（几何死点 −56.33 mm，留裕度取 −55 mm）；
+     被动铰 R5 限制在死点 2.423 rad 以内，防止回缩冲过死点翻折自锁 -->
 <robot name="linear_arm">
   <!-- 统一颜色：RViz / urdfdom 会读取此顶层 material。 -->
   <material name="body_grey">
@@ -267,7 +268,7 @@
     <child link="B5"/>
     <origin xyz="-0.00617502 -6.68732e-10 -0.224006"/>
     <axis xyz="-0.0275558 -2.98419e-09 -0.99962"/>
-    <limit lower="-0.057" upper="0.0" effort="200" velocity="0.5"/>
+    <limit lower="-0.055" upper="0.0" effort="200" velocity="0.5"/>
   </joint>
 
   <!-- R5: SolidWorks 同心552/554 (大臂电缸下支点) -->
@@ -276,7 +277,7 @@
     <child link="B6"/>
     <origin xyz="-0.00132494 -1.43486e-10 -0.0480638"/>
     <axis xyz="0 1 0"/>
-    <limit lower="-2.9" upper="2.9" effort="60" velocity="3.0"/>
+    <limit lower="-0.1" upper="2.2" effort="60" velocity="3.0"/>
   </joint>
 
   <!-- R7: SolidWorks 同心34/417 (腕部十字轴第1轴) -->

@@ -531,7 +531,7 @@ def main(argv=None):
     # 4.6 MuJoCo 对照
     err_r = err_A = err_J = err_v = err_Jtask = np.nan
     if mujoco is not None:
-        model = mujoco.MjModel.from_xml_path(MJCF)
+        model = mujoco.MjModel.from_xml_path(os.path.relpath(MJCF))
         data = mujoco.MjData(model)
         if model.nv != N:
             print(f"  FAIL MuJoCo nv={model.nv} != {N}")

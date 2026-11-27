@@ -138,8 +138,8 @@ cd D:\robotics\linrot-arm\model
 ## 7. 已知限制
 
 - **关节限位部分是占位值**：旋转 ±2.9 rad、移动 ±0.1 m。
-  例外：`R2` 单向 `[0, +2.9] rad`、`L1` 单向 `[−0.057, 0] m`，
-  用模板顶部的 `R2_LOWER/R2_UPPER`、`L1_LOWER/L1_UPPER` 宏；
+  例外：`R2` 单向 `[0, +2.9] rad`、`L1` 单向 `[−0.055, 0] m`、被动铰 `R5` `[−0.1, +2.2] rad`（防肘四连杆越过 2.423 rad 死点自锁），
+  用模板顶部的 `R2_LOWER/R2_UPPER`、`L1_LOWER/L1_UPPER`、`R5_LOWER/R5_UPPER` 宏；
   其余等型号手册确认后改 `REV_LOWER` / `REV_UPPER` / `SLIDE_LOWER` / `SLIDE_UPPER`。
 - **`armature` 仍为 0**，质量矩阵条件数 3.1e6，直接做动力学仿真会飘。
 - **执行器是占位的**：已给 6 个驱动关节配 `<position>` 执行器，但增益和力限

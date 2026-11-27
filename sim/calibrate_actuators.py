@@ -63,7 +63,7 @@ class Kinematics:
     """约束投影 + 执行器坐标延拓。"""
 
     def __init__(self):
-        self.m = mujoco.MjModel.from_xml_path(MJCF)
+        self.m = mujoco.MjModel.from_xml_path(os.path.relpath(MJCF))
         self.d = mujoco.MjData(self.m)
         self.loops = json.load(open(LOOPS, encoding="utf-8"))
 
@@ -77,6 +77,10 @@ class Kinematics:
         assert all(i >= 0 for i in self.bid.values()), "刚体名不匹配"
         self.E = np.zeros((6, m.nv))
         self.E[np.arange(6), self.dadr] = 1.0
+        self.passive_mask = np.ones(m.nv, dtype=bool)
+        self.passive_mask[self.dadr] = False
+        self.elbow_jids = [mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, n)
+                           for n in ("R4", "L1", "R5")]
         self._rows_cache = None
 
     # ---------------------------------------------------------------- 约束
@@ -101,17 +105,35 @@ class Kinematics:
             rows.append(J2 - J1)
         return np.vstack(rows), np.concatenate(res)
 
-    def project(self, q, iters=8, tol=1e-12):
-        """最小范数 Newton 投影回 c(q)=0。"""
+    def project(self, q, iters=8, tol=1e-12, lock_act=True):
+        """最小范数 Newton 投影回 c(q)=0；默认锁住 6 个主动关节坐标，只调被动关节。"""
+        q = q.copy()
+        P = self.passive_mask
         for _ in range(iters):
             Jc, c = self.loop_rows(q)
             if np.linalg.norm(c) < tol:
                 break
-            q = q - Jc.T @ np.linalg.pinv(Jc @ Jc.T, rcond=1e-9) @ c
+            if lock_act:
+                Jp = Jc[:, P]
+                q[P] -= Jp.T @ np.linalg.pinv(Jp @ Jp.T, rcond=1e-9) @ c
+            else:
+                q -= Jc.T @ np.linalg.pinv(Jc @ Jc.T, rcond=1e-9) @ c
         return q
 
+    def in_elbow_limits(self, q, eps=1e-7):
+        """检查肘部四连杆关节 (R4, L1, R5) 是否在 MJCF 限位内。"""
+        m = self.m
+        for j in self.elbow_jids:
+            if not m.jnt_limited[j]:
+                continue
+            lo, hi = m.jnt_range[j]
+            val = q[m.jnt_qposadr[j]]
+            if val < lo - eps or val > hi + eps:
+                return False
+        return True
+
     def move(self, q, dq_act, step=5e-4):
-        """沿零空间给执行器坐标一个增量，失败（掉秩/投影不收敛）返回 ok=False。"""
+        """沿零空间给执行器坐标一个增量，失败（越限/掉秩/投影不收敛）返回 ok=False。"""
         n = max(1, int(np.ceil(np.max(np.abs(dq_act)) / step)))
         for _ in range(n):
             Jc, _ = self.loop_rows(q)
@@ -123,8 +145,10 @@ class Kinematics:
             if np.linalg.matrix_rank(A, tol=1e-3) < 6:
                 return q, False
             q = q + N @ np.linalg.pinv(A, rcond=1e-6) @ (dq_act / n)
-            q = self.project(q)
+            q = self.project(q, lock_act=True)
             if np.linalg.norm(self.loop_rows(q)[1]) > 1e-6:
+                return q, False
+            if not self.in_elbow_limits(q):
                 return q, False
         return q, True
 
@@ -170,7 +194,7 @@ def sample_elbow(kin, q0, step_mm=0.5):
             q = q2
             th, _ = kin.state_after(q)
             res = np.linalg.norm(kin.loop_rows(q)[1]) * 1000.0
-            out.append((sign * k * step, th, res))
+            out.append((float(q[kin.qadr[3]]), th, res))
         return n_max
 
     kin.state_after(q0)

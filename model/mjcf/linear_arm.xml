@@ -8,7 +8,8 @@
      只是为了压住冗余自转（球铰绕杆轴的自由度），不影响任务运动。
      数值宏集中在 model/templates/linear_arm.mjcf.tpl 顶部。 -->
 
-<!-- R2 只允许正转（0 位为竖直伸展）；L1 只能回缩，下限取标定实测的死点 −57 mm -->
+<!-- R2 只允许正转（0 位为竖直伸展）；L1 只能回缩（几何死点 −56.33 mm，留裕度取 −55 mm）；
+     被动铰 R5 限制在死点 2.423 rad 以内，防止回缩冲过死点翻折自锁 -->
 <!-- 闭环等式约束的时间常数 (s)。默认 0.02 在重力负载下会松到 1.5 mm；
      1 ms 步长下取 0.002 可压到 0.05 mm，且 2.5 倍步长以内仍稳定。 -->
 <!-- 执行器增益为占位值（等电机手册确认后替换）。位置伺服 + 速度阻尼，
@@ -89,14 +90,15 @@
 
               <!-- B5：5 个零件 -->
               <body name="B5" pos="-0.00617502 -6.68732e-10 -0.224006">
-                <joint name="L1" class="slide" axis="-0.0275558 -2.98419e-09 -0.99962" range="-0.057 0.0"
+                <joint name="L1" class="slide" axis="-0.0275558 -2.98419e-09 -0.99962" range="-0.055 0.0"
                        solreflimit="0.002 1"/>
                 <inertial pos="-0.0010802 1.14609e-08 -0.0369863" mass="0.024928" fullinertia="9.618326e-06 8.550634e-06 2.400692e-06 -8.728906e-09 -1.948029e-07 -2.033429e-09"/>
                 <geom name="B5_geom" mesh="B5_mesh"/>
 
                 <!-- B6：4 个零件 -->
                 <body name="B6" pos="-0.00132494 -1.43486e-10 -0.0480638">
-                  <joint name="R5" class="rev" axis="0 1 0"/>
+                  <joint name="R5" class="rev" axis="0 1 0" range="-0.1 2.2"
+                         solreflimit="0.002 1"/>
                   <inertial pos="0.0477517 -3.52953e-08 -0.0945253" mass="0.660446" fullinertia="4.068980e-03 4.276690e-03 4.055850e-04 -1.058340e-10 -3.342091e-05 -3.422278e-09"/>
                   <geom name="B6_geom" mesh="B6_mesh"/>
 
@@ -202,7 +204,7 @@
               ctrlrange="-2.9 2.9"
               forcerange="-60 60"/>
     <position name="act_L1" joint="L1" kp="20000" kv="200"
-              ctrlrange="-0.057 0.0"
+              ctrlrange="-0.055 0.0"
               forcerange="-200 200"/>
     <position name="act_L2" joint="L2" kp="20000" kv="200"
               ctrlrange="-0.1 0.1"
